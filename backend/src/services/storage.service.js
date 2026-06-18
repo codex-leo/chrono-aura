@@ -5,11 +5,12 @@ const client = new ImageKit({
 });
 
 const uploadFile = async(file,type='product') => {
-    const folderDest = (type === "product") ? "/products" : "/brands"
+    const folderDest = (type === "product") ? "/products" : "/brands";
+    const prefixName = (type === "product") ? "product" : "logo";
 
     const result = await client.files.upload({
         file : file,
-        fileName : `logo_${Date.now()}`,
+        fileName : `${prefixName}_${Date.now()}`,
         folder : `ChronoAura${folderDest}`
     });
 
