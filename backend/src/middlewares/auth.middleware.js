@@ -20,11 +20,32 @@ const authAdmin = async (req, res, next) => {
     }
 
     next();
-  } catch (err) {
+  } catch (error) {
     return res.status(403).json({
       message: "Your'e not permitted to use this resource.",
     });
   }
 };
 
-module.exports = { authAdmin };
+const authUser = async(req, res, next) => {
+    const token = req.cookies.token;
+
+    if(!token) {
+        return res.status(401).json({
+            message : "Your'e unauthorized."
+        });
+    };
+
+    try {
+
+        jwt.verify(token,process.env.JWT_SECRET);
+        next();
+
+    }catch(error) {
+        return res.status(403).json({
+            message: "Your'e not permitted to use this resource.",
+        });
+    }
+};
+
+module.exports = { authAdmin, authUser };

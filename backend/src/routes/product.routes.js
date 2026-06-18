@@ -16,6 +16,13 @@ router.post(
   upload.fields([
     { name: "thumbnailImage", maxCount: 1 },
     { name: "images", maxCount: 5 },]),
-    productController.registerProduct);
+    productController.registerProduct
+);
+
+// GET /products/:limit
+router.get("/products/:limit",authMiddleware.authUser,productController.getProducts);
+
+// GET /product/:id
+router.get("/:id",authMiddleware.authUser,productController.getProduct);
 
 module.exports = router;

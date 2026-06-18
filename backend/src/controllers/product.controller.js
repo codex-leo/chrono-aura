@@ -113,4 +113,51 @@ const registerProduct = async (req, res) => {
   }
 };
 
-module.exports = { registerBrand, registerProduct };
+//logic for getting all products
+const getProducts = async(req, res) => {
+    try {
+        const limit = req.params.limit;
+        let products;
+
+        // GET api/product/products/all
+        if(limit === "all") {
+            products = await productModel.find({},"name thumbnailURI stock price").populate("brand","name");
+        }
+        else {
+            // GET api/product/products/:limit
+            products = await productModel.find({},"name thumbnailURI stock price").limit(limit).populate("brand","name");
+        }
+
+        res.status(200).json({
+            message : "Fetched Products Successfully.",
+            products : products
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message : "Unable to fetch products due to an unexpected error."
+        });
+    }
+};
+
+//logic for getting a specific product information
+const getProduct = async(req,res) => {
+    try {
+
+        const id = req.params.id;
+
+        const product = await productModel.findById(id).populate("brand");
+
+        res.status(200).json({
+            message : "Product information fetched successfully.",
+            product : product
+        });
+
+    }catch (error) {
+        res.status(500).json({
+            message : "Unable to fetch product information due to an unexpexted error."
+        });
+    }
+};
+
+module.exports = { registerBrand, registerProduct, getProducts, getProduct };
