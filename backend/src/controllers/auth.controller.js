@@ -1,6 +1,7 @@
 const userModel = require("../models/user.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const cartModel = require("../models/cart.model");
 
 //logic to register an user
 const registerUser = async (req, res) => {
@@ -29,6 +30,13 @@ const registerUser = async (req, res) => {
     role: role,
   });
 
+  //generating cart of user
+  if (user.role !== "admin") {
+    const cart = await cartModel.create({ user: user._id });
+    user.cart = cart._id;
+    await user.save();
+  }
+  
   //generating token for user
   const token = jwt.sign(
     {

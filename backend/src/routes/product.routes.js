@@ -25,4 +25,7 @@ router.get("/products/:limit",authMiddleware.authUser,productController.getProdu
 // GET /product/:id
 router.get("/:id",authMiddleware.authUser,productController.getProduct);
 
+// PUT /product/:id
+router.put("/:id",authMiddleware.authAdmin,productController.updateProduct);
+
 module.exports = router;
