@@ -4,7 +4,14 @@ const cartController = require("../controllers/cart.controller");
 
 const router = express.Router();
 
+
 // POST /add-to-cart
-router.put("/add-to-cart/:cartId",authMiddleware.authUser,cartController.addToCart);
+router.post("/add-to-cart/:userId",authMiddleware.authUser,cartController.addToCart)
+
+// PUT /update-cart
+router.put("/update-cart/:userId",authMiddleware.authUser,cartController.updateCart);
+
+// GET /cart/:id
+router.get("/:userId",authMiddleware.authUser,cartController.getCart);
 
 module.exports = router;
