@@ -11,7 +11,13 @@ router.post("/add-to-cart/:userId",authMiddleware.authUser,cartController.addToC
 // PUT /update-cart
 router.put("/update-cart/:userId",authMiddleware.authUser,cartController.updateCart);
 
-// GET /cart/:id
+// GET /cart/:userId
 router.get("/:userId",authMiddleware.authUser,cartController.getCart);
+
+//DELETE /cart/:userId/clear-cart
+router.delete("/:userId/clear-cart",authMiddleware.authUser,cartController.clearCart);
+
+// DELETE /cart/:userId/:productId
+router.delete("/:userId/:productId",authMiddleware.authUser,cartController.removeProduct);
 
 module.exports = router;
