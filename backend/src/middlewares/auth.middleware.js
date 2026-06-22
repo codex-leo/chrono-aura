@@ -2,16 +2,31 @@ const jwt = require("jsonwebtoken");
 
 // for verifying if the user is admin or not
 const authAdmin = async (req, res, next) => {
-  const token = req.cookies.token;
+  const authHeader = req.headers.authorization;
+  /*
+     header {
+        Authorization : `Bearer ${accessToken}`
+     }
+  */
 
-  if (!token) {
+  if (!authHeader || !authHeader.startsWith("Bearer")) {
     return res.status(401).json({
-      message: "Unauthorized",
+      message: "You're Unauthorized",
     });
   }
 
+  const accessToken = authHeader.split(" ")[1]; // ["Bearer" , "accessToken"]
+
+  if (!accessToken) {
+    return res.status(401).json({
+      message: "You're Unauthorized",
+    });
+  }
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(
+      accessToken,
+      process.env.JWT_ACCESS_TOKEN_SECRET,
+    );
 
     if (decoded.role !== "admin") {
       return res.status(403).json({
@@ -27,25 +42,32 @@ const authAdmin = async (req, res, next) => {
   }
 };
 
-const authUser = async(req, res, next) => {
-    const token = req.cookies.token;
+// for verification of user
+const authUser = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-    if(!token) {
-        return res.status(401).json({
-            message : "Your'e unauthorized."
-        });
-    };
+  if (!authHeader || !authHeader.startsWith("Bearer")) {
+    return res.status(401).json({
+      message: "You're Unauthorized",
+    });
+  }
 
-    try {
+  const accessToken = authHeader.split(" ")[1];
 
-        jwt.verify(token,process.env.JWT_SECRET);
-        next();
+  if (!accessToken) {
+    return res.status(401).json({
+      message: "You're Unauthorized",
+    });
+  }
 
-    }catch(error) {
-        return res.status(403).json({
-            message: "Your'e not permitted to use this resource.",
-        });
-    }
+  try {
+    jwt.verify(accessToken, process.env.JWT_ACCESS_TOKEN_SECRET);
+    next();
+  } catch (error) {
+    return res.status(403).json({
+      message: "Your'e not permitted to use this resource.",
+    });
+  }
 };
 
 module.exports = { authAdmin, authUser };

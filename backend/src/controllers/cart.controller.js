@@ -21,7 +21,6 @@ const addToCart = async (req, res) => {
       message: "Added to cart successfully.",
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       message: "Due an unexpected error cart can't be updated.",
     });
@@ -48,7 +47,6 @@ const updateCart = async (req, res) => {
       cart: cart,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       message: "Due an unexpected error cart can't be updated.",
     });
@@ -76,7 +74,6 @@ const getCart = async (req, res) => {
       cart: cart,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       message: "Due an unexpected error cart can't be updated.",
     });
@@ -144,11 +141,17 @@ const removeProduct = async (req, res) => {
       message: "Product not found in cart.",
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       message: "Due an unexpected error cart can't be updated.",
     });
   }
 };
 
-module.exports = { updateCart, getCart, addToCart, clearCart, removeProduct };
+module.exports = 
+{ 
+  updateCart,
+  getCart,
+  addToCart,
+  clearCart,
+  removeProduct 
+};

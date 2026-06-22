@@ -11,5 +11,8 @@ router.post("/register",validationRules.registerUserValidationRules,authControll
 //POST /login
 router.post("/login",authController.loginUser);
 
+//POST /refresh-token
+router.post("/refresh-token",authController.refreshToken)
+
 
 module.exports = router;

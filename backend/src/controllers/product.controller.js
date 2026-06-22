@@ -173,7 +173,7 @@ const updateProduct = async (req, res) => {
 
     if (!product) {
       return res.status(404).json({
-        message: "Product not found."
+        message: "Product not found.",
       });
     }
 
@@ -182,11 +182,16 @@ const updateProduct = async (req, res) => {
       updatedProduct: product,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       message: "Due to an unexpected error product can't be updated.",
     });
   }
 };
 
-module.exports = { registerBrand, registerProduct, getProducts, getProduct, updateProduct };
+module.exports = {
+  registerBrand,
+  registerProduct,
+  getProducts,
+  getProduct,
+  updateProduct,
+};
