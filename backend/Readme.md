@@ -21,7 +21,7 @@ This is the backend for the ChronoAura online luxury watch store, built with Nod
 - Clone the repository:
 
 ```bash
-git clone https://github.com/chronoaura/chronoaura.git
+git clone https://github.com/codex-leo/chrono-aura.git
 ```
 
 -  Change directory to the backend folder:
