@@ -10,8 +10,8 @@ This is the backend for the ChronoAura online luxury watch store, built with Nod
 # TABLE OF CONTENTS
 
 - [Installation](#installation)
-- [Usage](#usage)
 - [API Endpoints](#api-endpoints)
+- [Usage](#usage)
 - [Contributing](#contributing)
 
 ---
@@ -54,6 +54,37 @@ npm run dev //for development
 - *Above command will start the server on `http://localhost:5000` by default and it uses nodemon to automatically restart the server when changes are made to the code.*
 
 - **Note : This backend is still under development and may have bugs or missing features and if you wish to use this for production, please make sure to test it thoroughly and make any necessary modifications to suit your needs.**
+
+---
+
+# API Endpoints
+
+**NOTE : Backend is still under development and endpoints may change in future releases. Please check the documentation for the latest updates.**
+
+- The backend provides the following API endpoints:
+
+     - **Authentication**
+        - `POST /api/auth/register` - Register a new user
+        - `POST /api/auth/login` - Login a user
+        - `POST /api/auth/refresh-token` - Refresh access token
+        - `POST /api/auth/logout` - Logout a 
+        - `POST /api/auth/logout-all` - Logout from all devices
+    
+    - **Products**
+        - `POST /api/product/register-brand` - Register a new brand (admin only)
+        - `POST /api/product/register-product` - Register a new product (admin only)
+        - ***NOTE** : This backend is designed in such a way that if you want to register a new product, you must first register the brand of that product. If the brand is not registered, you will not be able to register the product.*
+        - `GET /api/product/products/all` - Get all products
+        - `GET /api/product/products/:limit` - Get a limited number of products
+        - `GET /api/product/:id` - Get a single product by ID
+        - `PUT /api/product/:id` - Update a product by ID (admin only)
+
+    - **Cart**
+        - `POST /api/cart/add-to-cart` - Add a product to the cart
+        - `PUT /api/cart/update-cart/:userId` - Update the cart for a user
+        - `GET /api/cart/:userId` - Get the cart for a user
+        - `DELETE /api/cart/:userId/clear-cart` - Clear the cart for a user
+        - `DELETE /api/cart/:userId/:productId` - Remove a product from the cart for a user
 
 ---
 **[documentation under deveolopment so please check back later for more information]**

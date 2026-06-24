@@ -10,6 +10,7 @@ app.use(express.json());
 
 app.use("/api/auth",authRoutes); //prefix for auth routes /api/auth
 app.use("/api/product",productRoutes);
+
 app.use("/api/cart",cartRoutes);
 
 module.exports = app;

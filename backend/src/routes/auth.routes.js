@@ -18,5 +18,8 @@ router.post("/refresh-token",authController.refreshTokens)
 //POST /logout
 router.post("/logout",authMiddleWare.authUser,authController.logoutUser);
 
+// POST /logout-all
+router.post("/logout-all",authMiddleWare.authUser,authController.logoutAll)
+
 
 module.exports = router;

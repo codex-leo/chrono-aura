@@ -19,7 +19,7 @@ router.post(
     productController.registerProduct
 );
 
-// GET /products/:limit
+// GET /products/:limit (limit can be any number or a string "all")
 router.get("/products/:limit",authMiddleware.authUser,productController.getProducts);
 
 // GET /product/:id

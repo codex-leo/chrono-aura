@@ -263,4 +263,39 @@ const logoutUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, refreshTokens, logoutUser };
+// logic for logout from all devices
+const logoutAll = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        message: "Invalid refresh token.",
+      });
+    }
+
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_TOKEN_SECRET,
+    );
+
+    await sessionModel.updateMany(
+      { user: decoded.id, revoked: false },
+      { revoked: true },
+    );
+
+    res.clearCookie("refreshToken");
+
+    res.status(200).json({
+      message: "Logged out from all devices successfully.",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message:
+        "Due to an unexpected error user can't logged out from all devices.",
+    });
+  }
+};
+
+module.exports = { registerUser, loginUser, refreshTokens, logoutUser, logoutAll };
