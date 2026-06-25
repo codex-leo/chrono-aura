@@ -77,6 +77,7 @@ npm run dev //for development
         - `GET /api/product/products/all` - Get all products
         - `GET /api/product/products/:limit` - Get a limited number of products
         - `GET /api/product/:id` - Get a single product by ID
+        - `GET api/product/sample/products` - Get a sample product data (limited to 5 products) for homepage display before login or registration
         - `PUT /api/product/:id` - Update a product by ID (admin only)
 
     - **Cart**

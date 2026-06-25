@@ -9,8 +9,9 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.use("/api/auth",authRoutes); //prefix for auth routes /api/auth
-app.use("/api/product",productRoutes);
 
-app.use("/api/cart",cartRoutes);
+app.use("/api/product",productRoutes); //prefix for product related routes /api/product
+
+app.use("/api/cart",cartRoutes); //prefix for cart related routes /api/cart
 
 module.exports = app;

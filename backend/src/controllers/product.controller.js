@@ -188,10 +188,26 @@ const updateProduct = async (req, res) => {
   }
 };
 
+const getSampleProducts = async (req, res) => {
+  try {
+    const sampleProducts = await productModel
+    .find({},"name description brand thumbnailURI price")
+    .limit(5);
+    
+    res.status(200).json({
+      message : "Sample products fetched successfully.",
+      sampleProduct : sampleProducts
+    });
+  } catch (error) {
+    console.log(error)
+  }
+}
+
 module.exports = {
   registerBrand,
   registerProduct,
   getProducts,
   getProduct,
   updateProduct,
+  getSampleProducts
 };
