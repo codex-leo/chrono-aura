@@ -192,6 +192,7 @@ const getSampleProducts = async (req, res) => {
   try {
     const sampleProducts = await productModel
     .find({},"name description brand thumbnailURI price")
+    .populate("brand","name")
     .limit(5);
     
     res.status(200).json({

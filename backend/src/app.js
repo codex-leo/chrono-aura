@@ -3,8 +3,10 @@ const authRoutes = require("./routes/auth.routes");
 const cookieParser = require("cookie-parser");
 const productRoutes = require("./routes/product.routes");
 const cartRoutes = require("./routes/cart.routes");
+const cors = require("cors")
 
 const app = express();
+app.use(cors());
 app.use(cookieParser());
 app.use(express.json());
 
