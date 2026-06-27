@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Navbar from "./components/Navbar";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Login from "./pages/Login";
 
 const App = () => {
   const [products, setProducts] = useState([]);
@@ -23,7 +24,7 @@ const App = () => {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home products={products} />} />
-        <Route path="/login" element={<h1>Login</h1>} />
+        <Route path="/login" element={<Login />} />
       </Routes>
     </>
   );
