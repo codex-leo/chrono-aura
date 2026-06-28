@@ -4,6 +4,8 @@ import Navbar from "./components/Navbar";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Login from "./pages/Login";
+import SignIn from "./pages/SignIn";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const App = () => {
   const [products, setProducts] = useState([]);
@@ -25,6 +27,8 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home products={products} />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        <Route path="/signin" element={<SignIn />} />
       </Routes>
     </>
   );

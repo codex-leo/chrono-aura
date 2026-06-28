@@ -11,18 +11,22 @@ const Home = (props) => {
           </h1>
         </div>
         <div className="flex flex-wrap">
-          {props.products.map((product) => {
-            return (
-              <div className="w-1/2" key={product._id}>
-                <ProductCard
-                  name={product.name}
-                  brandName={product.brand["name"]}
-                  price={product.price["$numberDecimal"]}
-                  imgSrc={product.thumbnailURI}
-                />
-              </div>
-            );
-          })}
+          {props.products.length === 0 ? (
+            <div>Opps! No products to show sorry!</div>
+          ) : (
+            props.products.map((product) => {
+              return (
+                <div className="w-1/2" key={product._id}>
+                  <ProductCard
+                    name={product.name}
+                    brandName={product.brand["name"]}
+                    price={product.price["$numberDecimal"]}
+                    imgSrc={product.thumbnailURI}
+                  />
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </>
