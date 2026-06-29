@@ -24,7 +24,7 @@ const lowStock = async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({
-      message: "Due to unexpected error uable to process your request.",
+      message: "Due to an unexpected error, unable to process your request.",
     });
   }
 };
@@ -44,11 +44,11 @@ const getStats = async (req, res) => {
             productsListed : productsListed
         }
     });
-    
+
   } catch (error) {
     console.log(error);
     res.status(500).json({
-      message: "Due to unexpected error uable to process your request.",
+      message: "Due to an unexpected error, unable to process your request.",
     });
   }
 };
