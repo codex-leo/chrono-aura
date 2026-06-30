@@ -7,9 +7,12 @@ const lowStock = async (req, res) => {
   const minStockLimit = 10; // if stock < minStockLimit then we consider that as low stock
 
   try {
-    const products = await productModel.find({
+    const products = await productModel
+    .find({
       stock: { $lt: minStockLimit },
-    });
+    }, "name brand productionYear stock")
+    .populate("brand" ,"name")
+    ;
 
     if (products.length === 0) {
       return res.status(200).json({

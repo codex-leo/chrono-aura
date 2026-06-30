@@ -143,8 +143,8 @@ const loginUser = async (req, res) => {
       sameSite: "strict",
     });
 
-    res.status(201).json({
-      message: "User registered successfully.",
+    res.status(200).json({
+      message: "User logged in successfully.",
       accessToken: accessToken,
       user : user
     });
