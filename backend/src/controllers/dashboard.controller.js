@@ -10,7 +10,7 @@ const lowStock = async (req, res) => {
     const products = await productModel
     .find({
       stock: { $lt: minStockLimit },
-    }, "name brand productionYear stock")
+    }, "name description brand productionYear stock")
     .populate("brand" ,"name")
     ;
 
@@ -49,7 +49,6 @@ const getStats = async (req, res) => {
     });
 
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       message: "Due to an unexpected error, unable to process your request.",
     });

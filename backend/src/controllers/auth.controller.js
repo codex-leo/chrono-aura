@@ -143,10 +143,18 @@ const loginUser = async (req, res) => {
       sameSite: "strict",
     });
 
+    const userTosend = {
+      id : user._id,
+      username : user.username,
+      email : user.email,
+      role : user.role,
+      cart : user.cart
+    }
+
     res.status(200).json({
       message: "User logged in successfully.",
       accessToken: accessToken,
-      user : user
+      user: userTosend,
     });
   } catch (error) {
     res.status(500).json({
@@ -299,4 +307,10 @@ const logoutAll = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, refreshTokens, logoutUser, logoutAll };
+module.exports = {
+  registerUser,
+  loginUser,
+  refreshTokens,
+  logoutUser,
+  logoutAll,
+};
