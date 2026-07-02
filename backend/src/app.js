@@ -5,6 +5,7 @@ const productRoutes = require("./routes/product.routes");
 const cartRoutes = require("./routes/cart.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const userRoutes = require("./routes/users.routes");
+const brandRoutes = require("./routes/brand.routes");
 
 const cors = require("cors");
 
@@ -22,5 +23,7 @@ app.use("/api/cart", cartRoutes); //prefix for cart related routes /api/cart
 app.use("/api/admin/dashboard", dashboardRoutes); //prefix for dashboard related routes (admin only)
 
 app.use("/api/user", userRoutes); //prefix for user routes
+
+app.use("/api/brands", brandRoutes); //prefix for brands related routes
 
 module.exports = app;
