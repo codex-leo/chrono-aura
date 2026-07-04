@@ -11,7 +11,6 @@ This is the backend for the ChronoAura online luxury watch store, built with Nod
 
 - [Installation](#installation)
 - [API Endpoints](#api-endpoints)
-- [Usage](#usage)
 - [Contributing](#contributing)
 
 ---
@@ -81,11 +80,32 @@ npm run dev //for development
         - `PUT /api/product/:id` - Update a product by ID (admin only)
 
     - **Cart**
-        - `POST /api/cart/add-to-cart` - Add a product to the cart
+        - `POST /api/cart/add-to-cart/:userId` - Add a product to the cart
         - `PUT /api/cart/update-cart/:userId` - Update the cart for a user
         - `GET /api/cart/:userId` - Get the cart for a user
         - `DELETE /api/cart/:userId/clear-cart` - Clear the cart for a user
         - `DELETE /api/cart/:userId/:productId` - Remove a product from the cart for a user
+    - **Brand**
+        - `GET /api/brands/all` - Get all brands
+        - `GET /api/brands/:limit` - Get a limited number of brands
+        - `GET /api/brands/:id` - Get a single brand by ID
+    - **Users**
+        - `GET /api/user/me` - Get the current logged in user
+        - `GET /api/user/users/all` - Get all users (admin only)
+        - `GET /api/user/users/:limit` - Get a limited number of users (admin only)
+        - `GET /api/user/:id` - Get a single user by ID (admin only)
+    
+    - **Dashboard(admin only)**
+        - `GET /api/admin/dashboard/stats` - Get dashboard statistics (now it only returns total number of users, products and brands but in future it will return more statistics like total sales, revenue, etc.)
+        - `GET /api/admin/dashboard/low-stock` - Get low stock products (now it only returns products with stock less than 10 you can change this limit in the code `backend/src/controllers/dashboard.controller.js` but in future it will be configurable from the admin panel)
 
 ---
+
+
+---
+
+# Contributing
+
+If you wish to contribute to this project, please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to contribute.
+
 **[documentation under deveolopment so please check back later for more information]**

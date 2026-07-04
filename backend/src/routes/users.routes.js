@@ -7,7 +7,7 @@ const router = express.Router();
 // GET /me
 router.get("/me",authMiddleWare.authUser,userController.getMe);
 
-// GET /users/:limit or /all-users/all
+// GET /users/:limit or /users/all
 router.get("/users/:limit",authMiddleWare.authAdmin,userController.getAllUsers)
 
 //GET /:id 
