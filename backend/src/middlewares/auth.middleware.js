@@ -61,7 +61,9 @@ const authUser = async (req, res, next) => {
   }
 
   try {
-    jwt.verify(accessToken, process.env.JWT_ACCESS_TOKEN_SECRET);
+    const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_TOKEN_SECRET);
+    req.user = {};
+    req.user.id = decoded.id;
     next();
   } catch (error) {
     return res.status(403).json({
