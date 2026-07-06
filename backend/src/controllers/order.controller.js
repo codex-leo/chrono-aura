@@ -129,4 +129,72 @@ const createOrder = async (req, res) => {
   }
 };
 
-module.exports = {createOrder};
+//logic for getting order by id
+const getOrder = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const orderId = req.params.id;
+
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    if (userId !== order.user.toString()) {
+      return res.status(403).json({
+        message: "You're not allowed to use this resource.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Order fetched successfully.",
+      order: order,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Due to an unexpected error can't fetch order.",
+    });
+  }
+};
+
+//logic for getting orders (admin)
+const getOrders = async (req, res) => {
+  try {
+    const limit = req.params.limit || "all";
+    let orders;
+
+    if (limit.toLowerCase() === "all") {
+      orders = await orderModel
+        .find()
+        .populate("user","username email role")
+        .populate("items.product");
+    } else {
+      orders = await orderModel
+        .find()
+        .populate("user","username email role")
+        .populate("items.product")
+        .limit(limit);
+    }
+
+    if(orders.length === 0) {
+      return res.status(200).json({
+        message: "No orders listed right now.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Orders fetched successfully.",
+      orders: orders,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Due to an unexpected error can't fetch orders.",
+    });
+  }
+};
+
+module.exports = { createOrder, getOrder, getOrders };
