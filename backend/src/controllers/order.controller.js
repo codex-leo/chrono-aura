@@ -170,17 +170,17 @@ const getOrders = async (req, res) => {
     if (limit.toLowerCase() === "all") {
       orders = await orderModel
         .find()
-        .populate("user","username email role")
+        .populate("user", "username email role")
         .populate("items.product");
     } else {
       orders = await orderModel
         .find()
-        .populate("user","username email role")
+        .populate("user", "username email role")
         .populate("items.product")
         .limit(limit);
     }
 
-    if(orders.length === 0) {
+    if (orders.length === 0) {
       return res.status(200).json({
         message: "No orders listed right now.",
       });
@@ -197,4 +197,60 @@ const getOrders = async (req, res) => {
   }
 };
 
-module.exports = { createOrder, getOrder, getOrders };
+//logic for updating order status (admin)
+const updateOrderStatus = async (req, res) => {
+  try {
+    const id = req.params.id;
+    let status = req.body.status;
+
+    if (!status) {
+      return res.status(400).json({
+        message: "Order status is required",
+      });
+    }
+
+    status = status.toLowerCase();
+
+    const order = await orderModel.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    if (order.orderStatus === status) {
+      return res.status(200).json({
+        message: "Order status is already updated with this status.",
+      });
+    }
+
+    if (!orderUtils.isValidOrderStatusTransition(order.orderStatus, status)) {
+      return res.status(400).json({
+        message: "Invalid order status transition.",
+      });
+    }
+
+    if (status === "delivered") {
+      order.deliveredAt = new Date();
+    }
+    order.orderStatus = status;
+    order.statusHistory.push({
+      status: status,
+      changedAt: new Date(),
+    });
+    await order.save();
+
+    res.status(200).json({
+      message: "Order status updated successfully.",
+      order: order,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Due to an unexpected error can't update order status.",
+    });
+  }
+};
+
+module.exports = { createOrder, getOrder, getOrders, updateOrderStatus };

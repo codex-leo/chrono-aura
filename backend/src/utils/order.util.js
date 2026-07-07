@@ -5,4 +5,36 @@ const generateOrderNumber = () => {
   return orderNumber;
 };
 
-module.exports = { generateOrderNumber }
+const isValidOrderStatusTransition = (currentStatus, newStatus) => {
+  if (
+    currentStatus === "cancelled" ||
+    currentStatus === "returned" ||
+    currentStatus === "delivered"
+  ) {
+    return false;
+  }
+  if (currentStatus === "pending") {
+    if (newStatus !== "confirmed") {
+      return false;
+    }
+  } else if (currentStatus === "confirmed") {
+    if (newStatus !== "processing") {
+      return false;
+    }
+  } else if (currentStatus === "processing") {
+    if (newStatus !== "shipped") {
+      return false;
+    }
+  } else if (currentStatus === "shipped") {
+    if (newStatus !== "out_for_delivery") {
+      return false;
+    }
+  } else if (currentStatus === "out_for_delivery") {
+    if (newStatus !== "delivered") {
+      return false;
+    }
+  }
+  return true;
+};
+
+module.exports = { generateOrderNumber, isValidOrderStatusTransition };

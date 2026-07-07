@@ -13,4 +13,7 @@ router.get("/:id",authMiddleware.authUser,orderController.getOrder);
 // GET /admin/orders/:limit (limit be any number or all); 
 router.get("/admin/orders/:limit",authMiddleware.authAdmin,orderController.getOrders);
 
+// PATCH /admin/order-status/:id 
+router.patch("/admin/order-status/:id",authMiddleware.authAdmin,orderController.updateOrderStatus)
+
 module.exports = router;
