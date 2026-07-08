@@ -246,11 +246,104 @@ const updateOrderStatus = async (req, res) => {
       order: order,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       message: "Due to an unexpected error can't update order status.",
     });
   }
 };
 
-module.exports = { createOrder, getOrder, getOrders, updateOrderStatus };
+//logic for for getting my(current user)orders
+const getMyOrders = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const userOrders = await orderModel
+      .find({
+        user: userId,
+      })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "Orders fetched successfully.",
+      orders: userOrders,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Due to an unexpected error can't fetch orders.",
+    });
+  }
+};
+
+// logic for cancelling an order
+const cancelOrder = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const orderId = req.params.id;
+    const cancellationReason = req.body.cancellationReason || "N/A";
+
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    if (order.user.toString() !== userId) {
+      return res.status(403).json({
+        message: "You are not allowed to use this resource.",
+      });
+    }
+
+    if (
+      order.orderStatus === "pending" ||
+      order.orderStatus === "confirmed" ||
+      order.orderStatus === "processing"
+    ) {
+      const now = new Date();
+      order.orderStatus = "cancelled";
+      order.cancelledAt = now;
+      order.cancellationReason = cancellationReason;
+      order.statusHistory.push({
+        status: "cancelled",
+        changedAt: now,
+      });
+
+      for (const item of order.items) {
+        await productModel.findByIdAndUpdate(item.product, {
+          $inc: {
+            stock: item.quantity,
+          },
+        });
+      }
+
+      await order.save();
+    } else if (order.orderStatus === "cancelled") {
+      return res.status(400).json({
+        message: "Order is already cancelled.",
+      });
+    } else {
+      return res.status(400).json({
+        message: "You can't cancel order.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Order cancelled successfully.",
+      order: order,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Due to an unexpected error can not cancel order.",
+    });
+  }
+};
+
+module.exports = {
+  createOrder,
+  getOrder,
+  getOrders,
+  updateOrderStatus,
+  getMyOrders,
+  cancelOrder,
+};
