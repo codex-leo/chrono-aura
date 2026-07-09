@@ -19,6 +19,9 @@ router.get("/my-orders",authMiddleware.authUser,orderController.getMyOrders);
 // POST /cancel/:id
 router.post("/cancel/:id",authMiddleware.authUser,orderController.cancelOrder);
 
+// POST /request-return/:id
+router.post("/request-return/:id",authMiddleware.authUser,orderController.requestOrderReturn);
+
 // GET /:id 
 router.get("/:id",authMiddleware.authUser,orderController.getOrder);
 

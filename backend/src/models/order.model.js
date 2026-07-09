@@ -45,8 +45,8 @@ const orderSchema = new mongoose.Schema(
     payment: {
       method: {
         type: String,
-        enum : ["cod","online"],
-        default : "cod"
+        enum: ["cod", "online"],
+        default: "cod",
       },
       paymentStatus: {
         type: String,
@@ -65,6 +65,7 @@ const orderSchema = new mongoose.Schema(
         "out_for_delivery",
         "delivered",
         "cancelled",
+        "waiting_for_return_approval",
         "returned",
       ],
       default: "pending",
@@ -78,6 +79,23 @@ const orderSchema = new mongoose.Schema(
     estimatedDelivery: Date,
     deliveredAt: Date,
     cancelledAt: Date,
+    return: {
+      initiatedAt: Date,
+      returnReason: String,
+      status: {
+        type: String,
+        enum: [
+          "pending",
+          "out_for_pickup",
+          "order_received",
+          "approved",
+          "completed",
+          "rejected",
+        ],
+        default: "pending",
+      },
+    },
+    returnedAt: Date,
     cancellationReason: String,
     notes: String,
   },

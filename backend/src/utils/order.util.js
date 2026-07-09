@@ -9,7 +9,8 @@ const isValidOrderStatusTransition = (currentStatus, newStatus) => {
   if (
     currentStatus === "cancelled" ||
     currentStatus === "returned" ||
-    currentStatus === "delivered"
+    currentStatus === "delivered" || 
+    currentStatus === "waiting_for_return_approval"
   ) {
     return false;
   }

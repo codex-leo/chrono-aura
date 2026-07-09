@@ -339,6 +339,75 @@ const cancelOrder = async (req, res) => {
   }
 };
 
+//logic for requesting a return of whole order(including all items)
+const requestOrderReturn = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const orderId = req.params.id;
+    const returnReason = req.body.returnReason || "N/A";
+
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    if (order.user.toString() !== userId) {
+      return res.status(403).json({
+        message: "You're not allowed to use this resource.",
+      });
+    }
+
+    if (order.orderStatus === "waiting_for_return_approval") {
+      return res.status(400).json({
+        message:
+          "Can't return your order as it already have a return request waiting for approval.",
+      });
+    }
+
+    if (
+      order.orderStatus === "delivered" &&
+      order.payment.paymentStatus === "paid"
+    ) {
+      const returnDate = new Date(order.deliveredAt);
+      returnDate.setDate(returnDate.getDate() + 7); //considering 7 days return policy
+      const now = new Date();
+
+      if (now <= returnDate) {
+        order.orderStatus = "waiting_for_return_approval";
+        order.statusHistory.push({
+          status: "waiting_for_return_approval",
+          changedAt: now,
+        });
+        order.return.initiatedAt = now;
+        order.return.returnReason = returnReason;
+        order.return.status = "pending";
+        await order.save();
+      } else {
+        return res.status(400).json({
+          message: "Order can't be returned as return date is expired.",
+        });
+      }
+    } else {
+      return res.status(400).json({
+        message:
+          "Order can't be returned.",
+      });
+    }
+
+    res.status(200).json({
+      message:
+        "Order successfully set for return approval, and return process will start after approval.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Due an unexpected error order can't be returned.",
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   getOrder,
@@ -346,4 +415,5 @@ module.exports = {
   updateOrderStatus,
   getMyOrders,
   cancelOrder,
+  requestOrderReturn
 };
