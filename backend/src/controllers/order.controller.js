@@ -392,8 +392,7 @@ const requestOrderReturn = async (req, res) => {
       }
     } else {
       return res.status(400).json({
-        message:
-          "Order can't be returned.",
+        message: "Order can't be returned.",
       });
     }
 
@@ -408,6 +407,123 @@ const requestOrderReturn = async (req, res) => {
   }
 };
 
+//logic for getting all orders which are waiting for return approval (admin)
+const getOrderReturnRequest = async (req, res) => {
+  try {
+    const limit = req.params.limit;
+    let orders;
+    if (limit === "all") {
+      orders = await orderModel
+        .find({
+          orderStatus: "waiting_for_return_approval",
+        })
+        .populate("user", "username email")
+        .sort({ "return.initiatedAt": -1 });
+    } else {
+      orders = await orderModel
+        .find({
+          orderStatus: "waiting_for_return_approval",
+        })
+        .populate("user", "username email")
+        .limit(limit)
+        .sort({ "return.initiatedAt": -1 });
+    }
+    res.status(200).json({
+      message: "Order return requests fetched successfully.",
+      orders: orders,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message:
+        "Due to an unexpected error, order return requests can't be fetched.",
+    });
+  }
+};
+
+//logic for approving return request (admin)
+const approveReturnRequest = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    if (
+      order.orderStatus === "waiting_for_return_approval" &&
+      order.return.status === "pending"
+    ) {
+      const now = new Date();
+      order.orderStatus = "return_confirmed";
+      order.return.status = "approved";
+      order.return.approvedAt = now;
+      order.statusHistory.push({
+        status: "return_confirmed",
+        changedAt: now,
+      });
+      await order.save();
+    } else {
+      return res.status(400).json({
+        message:
+          "Unable to approve return as order is not waiting for return approval and return status is not pending.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Return approved successfully.",
+      order: order,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Due to an unexpected error return request can't be approved.",
+    });
+  }
+};
+
+//logic for rejecting return request (admin)
+const rejectReturnRequest = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    if (
+      order.orderStatus === "waiting_for_return_approval" &&
+      order.return.status === "pending"
+    ) {
+      const now = new Date();
+      order.orderStatus = "delivered";
+      order.return.status = "rejected";
+      order.return.rejectedAt = now;
+      order.statusHistory.push({
+        status: "delivered",
+        changedAt: now,
+      });
+      await order.save();
+    } else {
+      return res.status(400).json({
+        message:
+          "Unable to reject return request as order is not waiting for return approval and return status is not pending.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Return rejected successfully.",
+      order: order,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Due to an unexpected error return request can't be rejected.",
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   getOrder,
@@ -415,5 +531,8 @@ module.exports = {
   updateOrderStatus,
   getMyOrders,
   cancelOrder,
-  requestOrderReturn
+  requestOrderReturn,
+  getOrderReturnRequest,
+  approveReturnRequest,
+  rejectReturnRequest,
 };

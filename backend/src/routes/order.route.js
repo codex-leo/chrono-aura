@@ -22,6 +22,15 @@ router.post("/cancel/:id",authMiddleware.authUser,orderController.cancelOrder);
 // POST /request-return/:id
 router.post("/request-return/:id",authMiddleware.authUser,orderController.requestOrderReturn);
 
+// PUT /admin/return-requests/:id/approve
+router.put("/admin/return-requests/:id/approve",authMiddleware.authAdmin,orderController.approveReturnRequest);
+
+// PUT /admin/return-requests/:id/reject
+router.put("/admin/return-requests/:id/reject",authMiddleware.authAdmin,orderController.rejectReturnRequest);
+
+// GET /admin/return-requests/:limit (limit be any number or all);
+router.get("/admin/return-requests/:limit",authMiddleware.authAdmin,orderController.getOrderReturnRequest);
+
 // GET /:id 
 router.get("/:id",authMiddleware.authUser,orderController.getOrder);
 
