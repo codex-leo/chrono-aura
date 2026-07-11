@@ -524,6 +524,102 @@ const rejectReturnRequest = async (req, res) => {
   }
 };
 
+//logic for processing return pickup (admin)
+const returnPickup = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    if (
+      order.return.status === "approved" &&
+      order.orderStatus === "return_confirmed"
+    ) {
+      const now = new Date();
+      order.return.status = "out_for_pickup";
+      order.orderStatus = "return_processing";
+      order.statusHistory.push({
+        status: "return_processing",
+        changedAt: now,
+      });
+      order.return.outForPickupAt = now;
+      const estimatedPickupDate = new Date();
+      estimatedPickupDate.setDate(estimatedPickupDate.getDate() + 4);
+      order.return.estimatedPickup = estimatedPickupDate;
+      await order.save();
+    } else {
+      return res.status(400).json({
+        message:
+          "Return order pickup can't be set, as order return request is not yet approved.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Order return pickup set successfully.",
+      order: order,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message:
+        "Due to an unexpected error return pickup request can't be fulfilled.",
+    });
+  }
+};
+
+//logic for processing return received (admin)
+const returnReceived = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    if (
+      order.return.status === "out_for_pickup" &&
+      order.orderStatus === "return_processing"
+    ) {
+      const now = new Date();
+      order.return.status = "order_received";
+      order.return.receivedAt = now;
+      order.statusHistory.push({
+        status: "order_received",
+        changedAt: now,
+      });
+      for (const item of order.items) {
+        await productModel.findByIdAndUpdate(item.product, {
+          $inc: {
+            stock: item.quantity,
+          },
+        });
+      }
+      await order.save();
+    } else {
+      return res.status(400).json({
+        message: "Return order can't be set to received.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Order return received successfully.",
+      order: order,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message:
+        "Due to an unexpected error return order pickup recieved request can't be fulfilled.",
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   getOrder,
@@ -535,4 +631,6 @@ module.exports = {
   getOrderReturnRequest,
   approveReturnRequest,
   rejectReturnRequest,
+  returnPickup,
+  returnReceived,
 };

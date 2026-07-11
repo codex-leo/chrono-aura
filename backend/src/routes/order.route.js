@@ -28,6 +28,12 @@ router.put("/admin/return-requests/:id/approve",authMiddleware.authAdmin,orderCo
 // PUT /admin/return-requests/:id/reject
 router.put("/admin/return-requests/:id/reject",authMiddleware.authAdmin,orderController.rejectReturnRequest);
 
+// PUT /admin/return-requests/:id/return-pickup
+router.put("/admin/return-requests/:id/return-pickup",authMiddleware.authAdmin,orderController.returnPickup);
+
+// PUT /admin/return-requests/:id/return-received
+router.put("/admin/return-requests/:id/return-received",authMiddleware.authAdmin,orderController.returnReceived);
+
 // GET /admin/return-requests/:limit (limit be any number or all);
 router.get("/admin/return-requests/:limit",authMiddleware.authAdmin,orderController.getOrderReturnRequest);
 
