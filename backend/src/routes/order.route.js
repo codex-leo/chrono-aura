@@ -34,10 +34,13 @@ router.put("/admin/return-requests/:id/return-pickup",authMiddleware.authAdmin,o
 // PUT /admin/return-requests/:id/return-received
 router.put("/admin/return-requests/:id/return-received",authMiddleware.authAdmin,orderController.returnReceived);
 
+// PUT /admin/return-requests/:id/complete-return
+router.put("/admin/return-requests/:id/complete-return",authMiddleware.authAdmin,orderController.completeReturn);
+
 // GET /admin/return-requests/:limit (limit be any number or all);
 router.get("/admin/return-requests/:limit",authMiddleware.authAdmin,orderController.getOrderReturnRequest);
 
-// GET /:id 
+// GET /my-orders
 router.get("/:id",authMiddleware.authUser,orderController.getOrder);
 
 

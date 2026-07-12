@@ -620,6 +620,52 @@ const returnReceived = async (req, res) => {
   }
 };
 
+//logic for completing order return process (admin)
+const completeReturn = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    const order = await orderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    if (
+      order.orderStatus === "return_processing" &&
+      order.return.status === "order_received"
+    ) {
+      const now = new Date();
+      order.orderStatus = "returned";
+      order.returnedAt = now;
+      order.return.status = "completed";
+      order.payment.paymentStatus = "refunded";
+      order.payment.refundedAt = now;
+      order.statusHistory.push({
+        status: "returned",
+        changedAt: now,
+      });
+      await order.save();
+    } else {
+      return res.status(400).json({
+        message: "Order return complete request can't be fulfilled.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Order return completed successfully.",
+      order: order,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message:
+        "Due an unexpected error order return complete request can't be fulfilled.",
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   getOrder,
@@ -633,4 +679,5 @@ module.exports = {
   rejectReturnRequest,
   returnPickup,
   returnReceived,
+  completeReturn,
 };

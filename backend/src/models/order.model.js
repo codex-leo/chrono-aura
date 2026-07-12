@@ -54,6 +54,7 @@ const orderSchema = new mongoose.Schema(
         default: "pending",
       },
       paidAt: Date,
+      refundedAt: Date,
     },
     orderStatus: {
       type: String,
