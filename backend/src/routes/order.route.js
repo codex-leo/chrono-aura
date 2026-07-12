@@ -40,7 +40,7 @@ router.put("/admin/return-requests/:id/complete-return",authMiddleware.authAdmin
 // GET /admin/return-requests/:limit (limit be any number or all);
 router.get("/admin/return-requests/:limit",authMiddleware.authAdmin,orderController.getOrderReturnRequest);
 
-// GET /my-orders
+// GET /:id
 router.get("/:id",authMiddleware.authUser,orderController.getOrder);
 
 
