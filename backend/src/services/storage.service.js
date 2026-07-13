@@ -3,20 +3,38 @@
 const ImageKit = require("@imagekit/nodejs");
 
 const client = new ImageKit({
-    privateKey : process.env.IMAGE_KIT_PRIVATE_KEY
+  privateKey: process.env.IMAGE_KIT_PRIVATE_KEY,
 });
 
-const uploadFile = async(file,type='product') => {
-    const folderDest = (type === "product") ? "/products" : "/brands";
-    const prefixName = (type === "product") ? "product" : "logo";
+const uploadConfig = {
+  product: {
+    folderDest: "/products",
+    prefixName: "product",
+  },
+  brand: {
+    folderDest: "/brands",
+    prefixName: "logo",
+  },
+  review: {
+    folderDest: "/products/reviews",
+    prefixName: "review",
+  },
+};
 
-    const result = await client.files.upload({
-        file : file,
-        fileName : `${prefixName}_${Date.now()}`,
-        folder : `ChronoAura${folderDest}`
-    });
+const uploadFile = async (file, type = "product") => {
+  const config = uploadConfig[type];
 
-    return result;
+  if (!config) {
+    throw new Error("Invalid Type.");
+  }
+
+  const result = await client.files.upload({
+    file: file,
+    fileName: `${config.prefixName}_${Date.now()}_${Math.random() * 10000}`,
+    folder: `ChronoAura${config.folderDest}`,
+  });
+
+  return result;
 };
 
 module.exports = { uploadFile };

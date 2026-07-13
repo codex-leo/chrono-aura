@@ -1,6 +1,7 @@
 const express = require("express");
 const authMiddleware = require("../middlewares/auth.middleware");
 const productController = require("../controllers/product.controller");
+const reviewController = require("../controllers/review.controller");
 const multer = require("multer");
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -31,4 +32,9 @@ router.put("/:id",authMiddleware.authAdmin,productController.updateProduct);
 // GET /product/sample/products
 router.get("/sample/products",productController.getSampleProducts);
 
+router.post("/:id/reviews",authMiddleware.authUser,
+  upload.fields([
+  {name : "images", maxCount : 5}]),
+  reviewController.createReview
+);
 module.exports = router;
