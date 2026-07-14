@@ -1,12 +1,12 @@
 const orderModel = require("../models/order.model");
 const productModel = require("../models/product.model");
 const reviewModel = require("../models/review.model");
-const { uploadFile } = require("../services/storage.service");
 const storageService = require("../services/storage.service");
 
+// logic for uploading a review of a product
 const createReview = async (req, res) => {
   try {
-    const productId = req.params.id;
+    const productId = req.params.productId;
     const userId = req.user.id;
     const { message, rating = 1 } = req.body;
 
@@ -28,6 +28,17 @@ const createReview = async (req, res) => {
       return res.status(400).json({
         message:
           "You only can submit review for a product you've purchased and received.",
+      });
+    }
+
+    const existingReview = await reviewModel.findOne({
+      user: userId,
+      product: productId,
+    });
+
+    if (existingReview) {
+      return res.status(400).json({
+        message: "You have already reviewed this product.",
       });
     }
 
@@ -75,7 +86,6 @@ const createReview = async (req, res) => {
       review: review,
     });
   } catch (error) {
-    console.log(error);
     if (error.code === 11000) {
       return res.status(400).json({
         message: "You have already reviewed this product",
@@ -87,4 +97,100 @@ const createReview = async (req, res) => {
   }
 };
 
-module.exports = { createReview };
+//logic for getting all reviews of product
+const getReviews = async (req, res) => {
+  try {
+    const productId = req.params.productId;
+
+    const product = await productModel.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found.",
+      });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
+
+    const skip = (page - 1) * limit;
+
+    const reviews = await reviewModel
+      .find({
+        product: productId,
+      })
+      .populate("user", "username")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    const totalPages = Math.ceil(product.reviewCount / limit);
+
+    res.status(200).json({
+      message: "Reviews fetched successfully.",
+      reviews: reviews,
+      averageRating: product.averageRating,
+      reviewCount: product.reviewCount,
+      totalPages: totalPages,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Due to an unexpected error unable to fetch reviews.",
+    });
+  }
+};
+
+//logic for deleting a review
+const deleteReview = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const reviewId = req.params.id;
+
+    const review = await reviewModel.findById(reviewId);
+
+    if (!review) {
+      return res.status(404).json({
+        message: "Review not found.",
+      });
+    }
+
+    if (userId !== review.user.toString()) {
+      return res.status(403).json({
+        message: "You're not permitted to use this resource.",
+      });
+    }
+
+    const product = await productModel.findById(review.product);
+
+    if (!product) {
+      return res.status(400).json({
+        message: "Review can't be deleted because product is already deleted.",
+      });
+    }
+
+    const totalRating = product.averageRating * product.reviewCount;
+    const newRating = totalRating - review.rating;
+
+    product.reviewCount -= 1;
+    if (product.reviewCount === 0) {
+      product.averageRating = 0;
+    } else {
+      product.averageRating = Number(
+        (newRating / product.reviewCount).toFixed(1),
+      );
+    }
+
+    await review.deleteOne();
+    await product.save();
+
+    res.status(200).json({
+      message: "Review Deleted Successfully.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Due to an unexpected error unable to delete review.",
+    });
+  }
+};
+
+module.exports = { createReview, getReviews, deleteReview };

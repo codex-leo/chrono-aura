@@ -32,9 +32,18 @@ router.put("/:id",authMiddleware.authAdmin,productController.updateProduct);
 // GET /product/sample/products
 router.get("/sample/products",productController.getSampleProducts);
 
-router.post("/:id/reviews",authMiddleware.authUser,
+// POST /:id/reviews
+router.post("/:productId/reviews",authMiddleware.authUser,
   upload.fields([
   {name : "images", maxCount : 5}]),
   reviewController.createReview
 );
+
+// GET /:id/reviews (query supported for pagination)
+//example : GET /344732/reviews?page=1&limit=10
+router.get("/:productId/reviews",authMiddleware.authUser,reviewController.getReviews);
+
+// DELETE /:id/reviews
+router.delete("/:id/reviews",authMiddleware.authUser,reviewController.deleteReview);
+
 module.exports = router;
