@@ -46,4 +46,7 @@ router.get("/:productId/reviews",authMiddleware.authUser,reviewController.getRev
 // DELETE /:id/reviews
 router.delete("/:id/reviews",authMiddleware.authUser,reviewController.deleteReview);
 
+// PATCH /:id/reviews
+router.patch("/:id/reviews",authMiddleware.authUser,reviewController.updateReview);
+
 module.exports = router;

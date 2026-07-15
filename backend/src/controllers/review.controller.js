@@ -193,4 +193,76 @@ const deleteReview = async (req, res) => {
   }
 };
 
-module.exports = { createReview, getReviews, deleteReview };
+//logic for updating a review
+const updateReview = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const reviewId = req.params.id;
+    const { message, rating } = req.body;
+
+    if (rating === undefined && message === undefined) {
+      return res.status(400).json({
+        message: "Nothing to update.",
+      });
+    }
+
+    const review = await reviewModel.findById(reviewId);
+
+    if (!review) {
+      return res.status(404).json({
+        message: "Review not found.",
+      });
+    }
+
+    if (review.user.toString() !== userId) {
+      return res.status(403).json({
+        message: "You're not permitted to use this resource.",
+      });
+    }
+
+    const product = await productModel.findById(review.product);
+
+    if (!product) {
+      return res.status(400).json({
+        message: "Review can't be updated because product is already deleted.",
+      });
+    }
+
+    if (rating !== undefined) {
+      const numRating = Number(rating);
+
+      if (isNaN(numRating) || numRating < 1 || numRating > 5) {
+        return res.status(400).json({
+          message: "Rating must be a number between 1 and 5.",
+        });
+      }
+
+      const newTotalRating =
+        product.averageRating * product.reviewCount - review.rating + numRating;
+
+      const newAverageRating = newTotalRating / product.reviewCount;
+
+      review.rating = numRating;
+
+      product.averageRating = Number(newAverageRating.toFixed(1));
+    }
+
+    if (message !== undefined) {
+      review.message = message;
+    }
+
+    await product.save();
+    await review.save();
+
+    res.status(200).json({
+      message: "Review updated successfully.",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Due to an unexpected error unable to update review.",
+    });
+  }
+};
+
+module.exports = { createReview, getReviews, deleteReview, updateReview };
