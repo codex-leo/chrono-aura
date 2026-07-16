@@ -49,4 +49,7 @@ router.delete("/:id/reviews",authMiddleware.authUser,reviewController.deleteRevi
 // PATCH /:id/reviews
 router.patch("/:id/reviews",authMiddleware.authUser,reviewController.updateReview);
 
+// GET /reviews/my-reviews
+router.get("/reviews/my-reviews",authMiddleware.authUser,reviewController.getMyReviews);
+
 module.exports = router;

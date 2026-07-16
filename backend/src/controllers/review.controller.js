@@ -265,4 +265,33 @@ const updateReview = async (req, res) => {
   }
 };
 
-module.exports = { createReview, getReviews, deleteReview, updateReview };
+// logic for getting my(current user) reviews
+const getMyReviews = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const review = await reviewModel
+      .find({
+        user: userId,
+      })
+      .populate("product", "name brand thumbnailURI")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "Reviews fetched successfully.",
+      review: review,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Due an unexpected error, reviews can't be fetched.",
+    });
+  }
+};
+
+module.exports = {
+  createReview,
+  getReviews,
+  deleteReview,
+  updateReview,
+  getMyReviews,
+};
