@@ -43,5 +43,8 @@ router.get("/admin/return-requests/:limit",authMiddleware.authAdmin,orderControl
 // GET /:id
 router.get("/:id",authMiddleware.authUser,orderController.getOrder);
 
+// GET /admin/:id
+router.get("/admin/:id",authMiddleware.authAdmin,orderController.getOrderById);
+
 
 module.exports = router;

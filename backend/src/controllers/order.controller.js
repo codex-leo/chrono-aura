@@ -666,6 +666,33 @@ const completeReturn = async (req, res) => {
   }
 };
 
+//logic for getting order by id (admin)
+const getOrderById = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    const order = await orderModel
+      .findById(orderId)
+      .populate("user", "username email");
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    res.status(200).json({
+      message: "Order fetched successfully.",
+      order: order,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "Due an unexpected error unable to fetch order.",
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   getOrder,
@@ -680,4 +707,5 @@ module.exports = {
   returnPickup,
   returnReceived,
   completeReturn,
+  getOrderById,
 };
