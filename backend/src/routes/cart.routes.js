@@ -6,18 +6,18 @@ const router = express.Router();
 
 
 // POST /add-to-cart
-router.post("/add-to-cart/:userId",authMiddleware.authUser,cartController.addToCart)
+router.post("/add-to-cart",authMiddleware.authUser,cartController.addToCart);
 
 // PUT /update-cart
-router.put("/update-cart/:userId",authMiddleware.authUser,cartController.updateCart);
+router.put("/update-cart",authMiddleware.authUser,cartController.updateCart);
 
-// GET /cart/:userId
-router.get("/:userId",authMiddleware.authUser,cartController.getCart);
+// GET /cart/my-cart
+router.get("/my-cart",authMiddleware.authUser,cartController.getCart);
 
-//DELETE /cart/:userId/clear-cart
-router.delete("/:userId/clear-cart",authMiddleware.authUser,cartController.clearCart);
+//DELETE /cart/my-cart/clear-cart
+router.delete("/my-cart/clear-cart",authMiddleware.authUser,cartController.clearCart);
 
-// DELETE /cart/:userId/:productId
-router.delete("/:userId/:productId",authMiddleware.authUser,cartController.removeProduct);
+// DELETE /cart/my-cart/:productId
+router.delete("/my-cart/:productId",authMiddleware.authUser,cartController.removeProduct);
 
 module.exports = router;

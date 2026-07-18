@@ -1,10 +1,32 @@
 const cartModel = require("../models/cart.model");
+const productModel = require("../models/product.model");
 
 //logic for adding into cart
 const addToCart = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.user.id;
+
+    if (!req.body.product) {
+      return res.status(400).json({
+        message: "Product data is required.",
+      });
+    }
+
     const newProductObj = req.body.product;
+
+    if (!newProductObj.productId) {
+      return res.status(400).json({
+        message: "Product Id not found in request.",
+      });
+    }
+
+    const product = await productModel.findById(newProductObj.productId);
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found.",
+      });
+    }
 
     const cart = await cartModel.findOne({ user: userId });
 
@@ -14,7 +36,50 @@ const addToCart = async (req, res) => {
       });
     }
 
-    cart.products.push(newProductObj);
+    let quantity;
+
+    if (newProductObj.quantity === undefined) {
+      quantity = 1;
+    } else {
+      const numQuantity = Number(newProductObj.quantity);
+      if (isNaN(numQuantity)) {
+        return res.status(400).json({
+          message: "Quantity must be a valid number.",
+        });
+      } else if (numQuantity <= 0) {
+        return res.status(400).json({
+          message: "Quantity must be greater than zero.",
+        });
+      } else {
+        quantity = numQuantity;
+      }
+    }
+
+    for (const productItem of cart.products) {
+      if (newProductObj.productId === productItem.product.toString()) {
+        if (quantity + productItem.quantity > product.stock) {
+          return res.status(400).json({
+            message: "Quantity exceeded product stock.",
+          });
+        }
+        productItem.quantity += quantity;
+        await cart.save();
+        return res.status(200).json({
+          message: "Added to cart successfully.",
+        });
+      }
+    }
+
+    if (quantity > product.stock) {
+      return res.status(400).json({
+        message: "Quantity exceeded product stock.",
+      });
+    }
+
+    cart.products.push({
+      product: newProductObj.productId,
+      quantity: quantity,
+    });
     await cart.save();
 
     res.status(200).json({
@@ -22,7 +87,7 @@ const addToCart = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: "Due an unexpected error cart can't be updated.",
+      message: "Due an unexpected error unable to add to cart.",
     });
   }
 };
@@ -30,7 +95,7 @@ const addToCart = async (req, res) => {
 //logic for updating items into cart
 const updateCart = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.user.id;
 
     const cart = await cartModel.findOneAndUpdate({ user: userId }, req.body, {
       returnDocument: "after",
@@ -56,7 +121,7 @@ const updateCart = async (req, res) => {
 //logic for getting cart information
 const getCart = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.user.id;
 
     const cart = await cartModel
       .findOne({
@@ -75,7 +140,7 @@ const getCart = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: "Due an unexpected error cart can't be updated.",
+      message: "Due an unexpected error cart can't be fetched.",
     });
   }
 };
@@ -83,7 +148,7 @@ const getCart = async (req, res) => {
 //logic for clearing cart
 const clearCart = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.user.id;
 
     const cart = await cartModel.findOne({ user: userId });
 
@@ -109,7 +174,7 @@ const clearCart = async (req, res) => {
 //logic for deleting a product from cart
 const removeProduct = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = req.user.id;
     const productId = req.params.productId;
 
     const cart = await cartModel.findOne({ user: userId });
@@ -142,16 +207,15 @@ const removeProduct = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: "Due an unexpected error cart can't be updated.",
+      message: "Due an unexpected error unable to remove product from cart.",
     });
   }
 };
 
-module.exports = 
-{ 
+module.exports = {
   updateCart,
   getCart,
   addToCart,
   clearCart,
-  removeProduct 
+  removeProduct,
 };
