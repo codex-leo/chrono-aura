@@ -8,8 +8,8 @@ const router = express.Router();
 // POST /add-to-cart
 router.post("/add-to-cart",authMiddleware.authUser,cartController.addToCart);
 
-// PUT /update-cart
-router.put("/update-cart",authMiddleware.authUser,cartController.updateCart);
+// PATCH /update-cart/:productId
+router.patch("/update-cart/:productId",authMiddleware.authUser,cartController.updateCart);
 
 // GET /cart/my-cart
 router.get("/my-cart",authMiddleware.authUser,cartController.getCart);

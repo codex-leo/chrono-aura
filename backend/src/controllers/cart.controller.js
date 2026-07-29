@@ -92,13 +92,24 @@ const addToCart = async (req, res) => {
   }
 };
 
-//logic for updating items into cart
+//logic for updating items into cart (only upadting quatity)
 const updateCart = async (req, res) => {
   try {
+    const productId = req.params.productId;
     const userId = req.user.id;
+    const quantity = req.body.quantity;
 
-    const cart = await cartModel.findOneAndUpdate({ user: userId }, req.body, {
-      returnDocument: "after",
+    const product = await productModel.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found.",
+      });
+    }
+
+    const cart = await cartModel.findOne({
+      user: userId,
+      "products.product": productId,
     });
 
     if (!cart) {
@@ -107,9 +118,39 @@ const updateCart = async (req, res) => {
       });
     }
 
-    res.status(200).json({
-      message: "Cart Updated Succesfully.",
-      cart: cart,
+    let numQuantity = Number(quantity);
+
+    if (isNaN(numQuantity)) {
+      return res.status(400).json({
+        message: "Quantity must be a valid number.",
+      });
+    } else if (!Number.isInteger(numQuantity)) {
+      return res.status(400).json({
+        message: "Quantity must be an integer.",
+      });
+    } else if (numQuantity <= 0) {
+      return res.status(400).json({
+        message: "Quantity can't be changed to zero or negative.",
+      });
+    } else if (numQuantity > product.stock) {
+      return res.status(400).json({
+        message: "Requested quantity exceeds available stock.",
+      });
+    }
+
+    for (const productItem of cart.products) {
+      if (productId === productItem.product.toString()) {
+        productItem.quantity = numQuantity;
+        await cart.save();
+        return res.status(200).json({
+          message: "Cart item updated successfully.",
+          cart: cart,
+        });
+      }
+    }
+
+    res.status(400).json({
+      message: "Product not found in cart.",
     });
   } catch (error) {
     res.status(500).json({
