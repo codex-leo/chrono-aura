@@ -235,7 +235,7 @@ const removeProduct = async (req, res) => {
     for (let i = 0; i < cart.products.length; i++) {
       const productObj = cart.products[i];
       if (productObj.product.toString() === productId) {
-        cart.products.slice(i,1);
+        cart.products.splice(i,1);
         await cart.save();
         return res.status(200).json({
           message: "Removed from cart successfully.",
