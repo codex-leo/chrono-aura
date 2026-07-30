@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema({
     cart : {
         type : mongoose.Schema.Types.ObjectId,
         ref : "cart",
+    },
+    wishlist : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : "wishlist",
     }
 });
 

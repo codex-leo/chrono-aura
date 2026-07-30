@@ -92,7 +92,7 @@ const addToCart = async (req, res) => {
   }
 };
 
-//logic for updating items into cart (only upadting quatity)
+//logic for updating items into cart (only updating quantity)
 const updateCart = async (req, res) => {
   try {
     const productId = req.params.productId;
@@ -218,7 +218,7 @@ const removeProduct = async (req, res) => {
     const userId = req.user.id;
     const productId = req.params.productId;
 
-    const cart = await cartModel.findOne({ user: userId });
+    const cart = await cartModel.findOne({ user: userId, "products.product" : productId });
 
     if (!cart) {
       return res.status(404).json({
@@ -227,15 +227,15 @@ const removeProduct = async (req, res) => {
     }
 
     if (cart.products.length === 0) {
-      return res.status(200).json({
-        message: "Cart is already empty",
+      return res.status(400).json({
+        message: "Cart is already empty.",
       });
     }
 
     for (let i = 0; i < cart.products.length; i++) {
       const productObj = cart.products[i];
       if (productObj.product.toString() === productId) {
-        cart.products.pop(i);
+        cart.products.slice(i,1);
         await cart.save();
         return res.status(200).json({
           message: "Removed from cart successfully.",

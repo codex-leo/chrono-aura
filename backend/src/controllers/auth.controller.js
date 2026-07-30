@@ -5,6 +5,7 @@ const cartModel = require("../models/cart.model");
 const tokensUtil = require("../utils/tokens.util");
 const sessionModel = require("../models/session.model");
 const crypto = require("node:crypto");
+const wishlistModel = require("../models/wishlist.model");
 
 //logic to register an user
 const registerUser = async (req, res) => {
@@ -34,10 +35,12 @@ const registerUser = async (req, res) => {
       role: role,
     });
 
-    //generating cart of user
+    //generating empty cart and wishlist for user
     if (user.role !== "admin") {
       const cart = await cartModel.create({ user: user._id });
       user.cart = cart._id;
+      const wishlist = await wishlistModel.create({ user: user._id });
+      user.wishlist = wishlist._id;
       await user.save();
     }
 
