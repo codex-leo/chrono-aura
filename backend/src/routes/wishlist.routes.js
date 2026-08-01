@@ -7,6 +7,9 @@ const router = express.Router();
 // POST /:productId
 router.post("/:productId",authMiddleware.authUser,wishlistController.addToWishlist);
 
+// DELETE /wishlist/clear
+router.delete("/clear",authMiddleware.authUser,wishlistController.clearWishList);
+
 // DELETE /:productId
 router.delete("/:productId",authMiddleware.authUser,wishlistController.removeFromWishList);
 

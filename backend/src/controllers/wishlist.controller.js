@@ -110,7 +110,7 @@ const getWishList = async (req, res) => {
         select: "name",
       },
     });
-    
+
     if (!wishlist) {
       return res.status(404).json({
         message: "Wishlist not found.",
@@ -128,4 +128,41 @@ const getWishList = async (req, res) => {
   }
 };
 
-module.exports = { addToWishlist, removeFromWishList, getWishList };
+//logic for clearing user's wishlist
+const clearWishList = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const wishlist = await wishlistModel.findOne({ user: userId });
+
+    if (!wishlist) {
+      return res.status(404).json({
+        message: "Wishlist not found.",
+      });
+    }
+
+    if (wishlist.products.length === 0) {
+      return res.status(400).json({
+        message: "Wishlist is already empty.",
+      });
+    }
+
+    wishlist.products = [];
+    await wishlist.save();
+
+    res.status(200).json({
+      message: "Wishlist cleared successfully.",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Due to an unexpected error, unable to clear wishlist.",
+    });
+  }
+};
+
+module.exports = {
+  addToWishlist,
+  removeFromWishList,
+  getWishList,
+  clearWishList,
+};
