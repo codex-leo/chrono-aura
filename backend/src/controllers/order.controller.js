@@ -5,7 +5,9 @@ const orderUtils = require("../utils/order.util");
 
 //logic for creating an order
 const createOrder = async (req, res) => {
+  let session;
   try {
+    session = await mongoose.startSession();
     const { items, shippingAddress, payment, notes } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -82,40 +84,53 @@ const createOrder = async (req, res) => {
     const estimatedDelivery = new Date();
     estimatedDelivery.setDate(estimatedDelivery.getDate() + 7);
 
-    const order = await orderModel.create({
-      user: req.user.id,
-      orderNumber: orderUtils.generateOrderNumber(),
-      items: orderItems,
-      pricing: {
-        subTotal,
-        discount,
-        shippingFee,
-        tax,
-        total,
-      },
-      shippingAddress,
-      payment: {
-        method: payment?.method || "cod",
-        paymentStatus: "pending",
-      },
-      orderStatus: "pending",
-      statusHistory: [
-        {
-          status: "pending",
-          changedAt: new Date(),
-        },
-      ],
-      estimatedDelivery,
-      notes,
-    });
+    let order = null;
 
-    for (const item of items) {
-      await productModel.findByIdAndUpdate(item.product, {
-        $inc: {
-          stock: -item.quantity,
-        },
-      });
-    }
+    await session.withTransaction(async () => {
+      [order] = await orderModel.create(
+        [
+          {
+            user: req.user.id,
+            orderNumber: orderUtils.generateOrderNumber(),
+            items: orderItems,
+            pricing: {
+              subTotal,
+              discount,
+              shippingFee,
+              tax,
+              total,
+            },
+            shippingAddress,
+            payment: {
+              method: payment?.method || "cod",
+              paymentStatus: "pending",
+            },
+            orderStatus: "pending",
+            statusHistory: [
+              {
+                status: "pending",
+                changedAt: new Date(),
+              },
+            ],
+            estimatedDelivery,
+            notes,
+          },
+        ],
+        { session },
+      );
+
+      for (const item of items) {
+        await productModel.findByIdAndUpdate(
+          item.product,
+          {
+            $inc: {
+              stock: -item.quantity,
+            },
+          },
+          { session },
+        );
+      }
+    });
 
     return res.status(201).json({
       message: "Order placed successfully.",
@@ -126,6 +141,8 @@ const createOrder = async (req, res) => {
     return res.status(500).json({
       message: "Due to an unexpected error your order can't be placed.",
     });
+  } finally {
+    await session.endSession();
   }
 };
 
