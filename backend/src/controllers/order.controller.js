@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const orderModel = require("../models/order.model");
 const productModel = require("../models/product.model");
 const orderUtils = require("../utils/order.util");
+const APIError = require("../utils/APIError.util");
 
 //logic for creating an order
 const createOrder = async (req, res) => {
@@ -11,9 +12,7 @@ const createOrder = async (req, res) => {
     const { items, shippingAddress, payment, notes } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        message: "Order must contain at least one item.",
-      });
+      throw new APIError(400, "Order must contain at least one item.");
     }
 
     const productIds = items.map((item) => item.product);
@@ -25,9 +24,7 @@ const createOrder = async (req, res) => {
       .populate("brand", "name");
 
     if (products.length !== productIds.length) {
-      return res.status(404).json({
-        message: "One or more products were not found.",
-      });
+      throw new APIError(404, "One or more products were not found.");
     }
 
     const productMap = new Map();
@@ -43,21 +40,18 @@ const createOrder = async (req, res) => {
       const product = productMap.get(item.product);
 
       if (!product) {
-        return res.status(404).json({
-          message: "Product not found.",
-        });
+        throw new APIError(404, "Product not found.");
       }
 
       if (item.quantity <= 0) {
-        return res.status(400).json({
-          message: `Invalid quantity for ${product.name}.`,
-        });
+        throw new APIError(400, `Invalid quantity for ${product.name}.`);
       }
 
       if (item.quantity > product.stock) {
-        return res.status(400).json({
-          message: `${product.name} has only ${product.stock} units available.`,
-        });
+        throw new APIError(
+          400,
+          `${product.name} has only ${product.stock} units available.`,
+        );
       }
 
       const productPrice = Number(product.price.toString());
@@ -137,12 +131,18 @@ const createOrder = async (req, res) => {
       order,
     });
   } catch (error) {
-    console.error(error);
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
     return res.status(500).json({
       message: "Due to an unexpected error your order can't be placed.",
     });
   } finally {
-    await session.endSession();
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
@@ -155,15 +155,11 @@ const getOrder = async (req, res) => {
     const order = await orderModel.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
-      });
+      throw new APIError(404, "Order not found.");
     }
 
     if (userId !== order.user.toString()) {
-      return res.status(403).json({
-        message: "You're not allowed to use this resource.",
-      });
+      throw new APIError(403, "You're not allowed to use this resource.");
     }
 
     res.status(200).json({
@@ -171,8 +167,12 @@ const getOrder = async (req, res) => {
       order: order,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error can't fetch order.",
     });
   }
@@ -208,7 +208,7 @@ const getOrders = async (req, res) => {
       orders: orders,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Due to an unexpected error can't fetch orders.",
     });
   }
@@ -221,9 +221,7 @@ const updateOrderStatus = async (req, res) => {
     let status = req.body.status;
 
     if (!status) {
-      return res.status(400).json({
-        message: "Order status is required",
-      });
+      throw new APIError(400, "Order status is required.");
     }
 
     status = status.toLowerCase();
@@ -231,21 +229,18 @@ const updateOrderStatus = async (req, res) => {
     const order = await orderModel.findById(id);
 
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
-      });
+      throw new APIError(404, "Order not found.");
     }
 
     if (order.orderStatus === status) {
-      return res.status(200).json({
-        message: "Order status is already updated with this status.",
-      });
+      throw new APIError(
+        400,
+        "Order status is already updated with this status.",
+      );
     }
 
     if (!orderUtils.isValidOrderStatusTransition(order.orderStatus, status)) {
-      return res.status(400).json({
-        message: "Invalid order status transition.",
-      });
+      throw new APIError(400, "Invalid order status transition.");
     }
 
     if (status === "delivered") {
@@ -263,7 +258,12 @@ const updateOrderStatus = async (req, res) => {
       order: order,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error can't update order status.",
     });
   }
@@ -285,7 +285,7 @@ const getMyOrders = async (req, res) => {
       orders: userOrders,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Due to an unexpected error can't fetch orders.",
     });
   }
@@ -293,30 +293,35 @@ const getMyOrders = async (req, res) => {
 
 // logic for cancelling an order
 const cancelOrder = async (req, res) => {
+  let session;
   try {
+    session = await mongoose.startSession();
     const userId = req.user.id;
     const orderId = req.params.id;
     const cancellationReason = req.body.cancellationReason || "N/A";
 
-    const order = await orderModel.findById(orderId);
+    let updatedOrder;
+    const cancellableStatuses = ["pending", "confirmed", "processing"];
 
-    if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
-      });
-    }
+    await session.withTransaction(async () => {
+      const order = await orderModel.findById(orderId).session(session);
 
-    if (order.user.toString() !== userId) {
-      return res.status(403).json({
-        message: "You are not allowed to use this resource.",
-      });
-    }
+      if (!order) {
+        throw new APIError(404, "Order not found.");
+      }
 
-    if (
-      order.orderStatus === "pending" ||
-      order.orderStatus === "confirmed" ||
-      order.orderStatus === "processing"
-    ) {
+      if (order.user.toString() !== userId) {
+        throw new APIError(403, "You are not allowed to use this resource.");
+      }
+
+      if (order.orderStatus === "cancelled") {
+        throw new APIError(400, "Order is already cancelled.");
+      }
+
+      if (!cancellableStatuses.includes(order.orderStatus)) {
+        throw new APIError(400, "You can't cancel this order.");
+      }
+
       const now = new Date();
       order.orderStatus = "cancelled";
       order.cancelledAt = now;
@@ -327,32 +332,31 @@ const cancelOrder = async (req, res) => {
       });
 
       for (const item of order.items) {
-        await productModel.findByIdAndUpdate(item.product, {
-          $inc: {
-            stock: item.quantity,
-          },
-        });
+        await productModel.findByIdAndUpdate(
+          item.product,
+          { $inc: { stock: item.quantity } },
+          { session },
+        );
       }
+      await order.save({ session });
+      updatedOrder = order;
+    });
 
-      await order.save();
-    } else if (order.orderStatus === "cancelled") {
-      return res.status(400).json({
-        message: "Order is already cancelled.",
-      });
-    } else {
-      return res.status(400).json({
-        message: "You can't cancel order.",
-      });
-    }
-
-    res.status(200).json({
+    return res.status(200).json({
       message: "Order cancelled successfully.",
-      order: order,
+      order: updatedOrder,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error can not cancel order.",
     });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
@@ -366,22 +370,18 @@ const requestOrderReturn = async (req, res) => {
     const order = await orderModel.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
-      });
+      throw new APIError(404, "Order not found.");
     }
 
     if (order.user.toString() !== userId) {
-      return res.status(403).json({
-        message: "You're not allowed to use this resource.",
-      });
+      throw new APIError(403, "You're not allowed to use this resource.");
     }
 
     if (order.orderStatus === "waiting_for_return_approval") {
-      return res.status(400).json({
-        message:
-          "Can't return your order as it already have a return request waiting for approval.",
-      });
+      throw new APIError(
+        400,
+        "Can't return your order as it already have a return request waiting for approval.",
+      );
     }
 
     if (
@@ -403,14 +403,13 @@ const requestOrderReturn = async (req, res) => {
         order.return.status = "pending";
         await order.save();
       } else {
-        return res.status(400).json({
-          message: "Order can't be returned as return date is expired.",
-        });
+        throw new APIError(
+          400,
+          "Order can't be returned as return date is expired.",
+        );
       }
     } else {
-      return res.status(400).json({
-        message: "Order can't be returned.",
-      });
+      throw new APIError(400, "Order can't be returned.");
     }
 
     res.status(200).json({
@@ -418,7 +417,12 @@ const requestOrderReturn = async (req, res) => {
         "Order successfully set for return approval, and return process will start after approval.",
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due an unexpected error order can't be returned.",
     });
   }
@@ -450,7 +454,7 @@ const getOrderReturnRequest = async (req, res) => {
       orders: orders,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message:
         "Due to an unexpected error, order return requests can't be fetched.",
     });
@@ -463,9 +467,7 @@ const approveReturnRequest = async (req, res) => {
     const orderId = req.params.id;
     const order = await orderModel.findById(orderId);
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
-      });
+      throw new APIError(404, "Order not found.");
     }
 
     if (
@@ -482,10 +484,10 @@ const approveReturnRequest = async (req, res) => {
       });
       await order.save();
     } else {
-      return res.status(400).json({
-        message:
-          "Unable to approve return as order is not waiting for return approval and return status is not pending.",
-      });
+      throw new APIError(
+        400,
+        "Unable to approve return as order is not waiting for return approval and return status is not pending.",
+      );
     }
 
     res.status(200).json({
@@ -493,7 +495,12 @@ const approveReturnRequest = async (req, res) => {
       order: order,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error return request can't be approved.",
     });
   }
@@ -505,9 +512,7 @@ const rejectReturnRequest = async (req, res) => {
     const orderId = req.params.id;
     const order = await orderModel.findById(orderId);
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
-      });
+      throw new APIError(404, "Order not found.");
     }
 
     if (
@@ -524,10 +529,10 @@ const rejectReturnRequest = async (req, res) => {
       });
       await order.save();
     } else {
-      return res.status(400).json({
-        message:
-          "Unable to reject return request as order is not waiting for return approval and return status is not pending.",
-      });
+      throw new APIError(
+        400,
+        "Unable to reject return request as order is not waiting for return approval and return status is not pending.",
+      );
     }
 
     res.status(200).json({
@@ -535,7 +540,12 @@ const rejectReturnRequest = async (req, res) => {
       order: order,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error return request can't be rejected.",
     });
   }
@@ -548,9 +558,7 @@ const returnPickup = async (req, res) => {
     const order = await orderModel.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
-      });
+      throw new APIError(404, "Order not found.");
     }
 
     if (
@@ -570,10 +578,10 @@ const returnPickup = async (req, res) => {
       order.return.estimatedPickup = estimatedPickupDate;
       await order.save();
     } else {
-      return res.status(400).json({
-        message:
-          "Return order pickup can't be set, as order return request is not yet approved.",
-      });
+      throw new APIError(
+        400,
+        "Return order pickup can't be set, as order return request is not yet approved.",
+      );
     }
 
     res.status(200).json({
@@ -581,7 +589,12 @@ const returnPickup = async (req, res) => {
       order: order,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message:
         "Due to an unexpected error return pickup request can't be fulfilled.",
     });
@@ -595,9 +608,7 @@ const returnReceived = async (req, res) => {
     const order = await orderModel.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
-      });
+      throw new APIError(404, "Order not found.");
     }
 
     if (
@@ -620,9 +631,7 @@ const returnReceived = async (req, res) => {
       }
       await order.save();
     } else {
-      return res.status(400).json({
-        message: "Return order can't be set to received.",
-      });
+      throw new APIError(400, "Return order can't be set to received.");
     }
 
     res.status(200).json({
@@ -630,7 +639,12 @@ const returnReceived = async (req, res) => {
       order: order,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message:
         "Due to an unexpected error return order pickup recieved request can't be fulfilled.",
     });
@@ -645,9 +659,7 @@ const completeReturn = async (req, res) => {
     const order = await orderModel.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
-      });
+      throw new APIError(404, "Order not found.");
     }
 
     if (
@@ -666,9 +678,10 @@ const completeReturn = async (req, res) => {
       });
       await order.save();
     } else {
-      return res.status(400).json({
-        message: "Order return complete request can't be fulfilled.",
-      });
+      throw new APIError(
+        400,
+        "Order return complete request can't be fulfilled.",
+      );
     }
 
     res.status(200).json({
@@ -676,7 +689,12 @@ const completeReturn = async (req, res) => {
       order: order,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message:
         "Due an unexpected error order return complete request can't be fulfilled.",
     });
@@ -693,9 +711,7 @@ const getOrderById = async (req, res) => {
       .populate("user", "username email");
 
     if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
-      });
+      throw new APIError(404, "Order not found.");
     }
 
     res.status(200).json({
@@ -703,8 +719,12 @@ const getOrderById = async (req, res) => {
       order: order,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due an unexpected error unable to fetch order.",
     });
   }
