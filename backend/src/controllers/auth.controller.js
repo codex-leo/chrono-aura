@@ -6,6 +6,7 @@ const tokensUtil = require("../utils/tokens.util");
 const sessionModel = require("../models/session.model");
 const crypto = require("node:crypto");
 const wishlistModel = require("../models/wishlist.model");
+const APIError = require("../utils/APIError.util");
 
 //logic to register an user
 const registerUser = async (req, res) => {
@@ -17,9 +18,7 @@ const registerUser = async (req, res) => {
     });
 
     if (isUserAlreadyExists) {
-      return res.status(409).json({
-        message: "User already exists.",
-      });
+      throw new APIError(409, "User already exists.");
     }
 
     //salt to be added in hashed password
@@ -83,7 +82,12 @@ const registerUser = async (req, res) => {
       accessToken: accessToken,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due an unexpected error user cannot be registered.",
     });
   }
@@ -99,17 +103,13 @@ const loginUser = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({
-        message: "Your'e not authorised",
-      });
+      throw new APIError(401, "Your'e not authorised");
     }
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
     if (!isPasswordCorrect) {
-      return res.status(401).json({
-        message: "Invalid credentials.",
-      });
+      throw new APIError(401, "Invalid credentials.");
     }
 
     //generating access and refresh tokens for user
@@ -147,12 +147,12 @@ const loginUser = async (req, res) => {
     });
 
     const userTosend = {
-      id : user._id,
-      username : user.username,
-      email : user.email,
-      role : user.role,
-      cart : user.cart
-    }
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      cart: user.cart,
+    };
 
     res.status(200).json({
       message: "User logged in successfully.",
@@ -160,21 +160,24 @@ const loginUser = async (req, res) => {
       user: userTosend,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error user cannot be logged in.",
     });
   }
 };
 
 const refreshTokens = async (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
-
-  if (!refreshToken) {
-    return res.status(403).json({
-      message: "Refresh token not found.",
-    });
-  }
   try {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      throw new APIError(403, "Refresh token not found.");
+    }
     const decoded = jwt.verify(
       refreshToken,
       process.env.JWT_REFRESH_TOKEN_SECRET,
@@ -191,9 +194,7 @@ const refreshTokens = async (req, res) => {
     });
 
     if (!session) {
-      return res.status(401).json({
-        message: "Invalid refresh token.",
-      });
+      throw new APIError(401, "Session not found or revoked.");
     }
 
     const newAccessToken = tokensUtil.generateAccessToken({
@@ -209,7 +210,7 @@ const refreshTokens = async (req, res) => {
 
     const newRefreshTokenHash = crypto
       .createHash("sha256")
-      .update(refreshToken)
+      .update(newRefreshToken)
       .digest("hex");
 
     session.refreshTokenHash = newRefreshTokenHash;
@@ -227,7 +228,12 @@ const refreshTokens = async (req, res) => {
       accessToken: newAccessToken,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error tokens can't be refreshed.",
     });
   }
@@ -239,9 +245,7 @@ const logoutUser = async (req, res) => {
     const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
-      return res.status(400).json({
-        message: "Refresh token not found.",
-      });
+      throw new APIError(400, "Refresh token not found.");
     }
 
     const refreshTokenHash = crypto
@@ -255,9 +259,7 @@ const logoutUser = async (req, res) => {
     });
 
     if (!session) {
-      return res.status(400).json({
-        message: "Invalid refresh token.",
-      });
+      throw new APIError(400, "Session not found or already revoked.");
     }
 
     session.revoked = true;
@@ -269,7 +271,12 @@ const logoutUser = async (req, res) => {
       message: "Logged out successfully.",
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error user can't be logged out.",
     });
   }
@@ -281,9 +288,7 @@ const logoutAll = async (req, res) => {
     const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
-      return res.status(400).json({
-        message: "Invalid refresh token.",
-      });
+      throw new APIError(400, "Refresh token not found.");
     }
 
     const decoded = jwt.verify(
@@ -302,8 +307,12 @@ const logoutAll = async (req, res) => {
       message: "Logged out from all devices successfully.",
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message:
         "Due to an unexpected error user can't logged out from all devices.",
     });

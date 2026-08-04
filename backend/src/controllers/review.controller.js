@@ -2,6 +2,7 @@ const orderModel = require("../models/order.model");
 const productModel = require("../models/product.model");
 const reviewModel = require("../models/review.model");
 const storageService = require("../services/storage.service");
+const APIError = require("../utils/APIError.util");
 
 // logic for uploading a review of a product
 const createReview = async (req, res) => {
@@ -13,9 +14,7 @@ const createReview = async (req, res) => {
     const product = await productModel.findById(productId);
 
     if (!product) {
-      return res.status(404).json({
-        message: "Product not found.",
-      });
+      throw new APIError(404, "Product not found.");
     }
 
     const order = await orderModel.findOne({
@@ -25,10 +24,7 @@ const createReview = async (req, res) => {
     });
 
     if (!order) {
-      return res.status(400).json({
-        message:
-          "You only can submit review for a product you've purchased and received.",
-      });
+      throw new APIError(400, "You only can submit review for a product you've purchased and received.");
     }
 
     const existingReview = await reviewModel.findOne({
@@ -37,9 +33,7 @@ const createReview = async (req, res) => {
     });
 
     if (existingReview) {
-      return res.status(400).json({
-        message: "You have already reviewed this product.",
-      });
+      throw new APIError(400, "You have already reviewed this product.");
     }
 
     const images = req.files?.images;
@@ -59,9 +53,7 @@ const createReview = async (req, res) => {
     const numRating = Number(rating);
 
     if (isNaN(numRating) || numRating < 1 || numRating > 5) {
-      return res.status(400).json({
-        message: "Rating must be a number between 1 and 5.",
-      });
+      throw new APIError(400, "Rating must be a number between 1 and 5.");
     }
 
     const review = await reviewModel.create({
@@ -86,12 +78,17 @@ const createReview = async (req, res) => {
       review: review,
     });
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
     if (error.code === 11000) {
       return res.status(400).json({
         message: "You have already reviewed this product",
       });
     }
-    res.status(500).json({
+    return res.status(500).json({
       message: "Due to an unexpected error review can't be submitted.",
     });
   }
@@ -105,9 +102,7 @@ const getReviews = async (req, res) => {
     const product = await productModel.findById(productId);
 
     if (!product) {
-      return res.status(404).json({
-        message: "Product not found.",
-      });
+      throw new APIError(404, "Product not found.");
     }
 
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -133,8 +128,12 @@ const getReviews = async (req, res) => {
       totalPages: totalPages,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error unable to fetch reviews.",
     });
   }
@@ -149,23 +148,17 @@ const deleteReview = async (req, res) => {
     const review = await reviewModel.findById(reviewId);
 
     if (!review) {
-      return res.status(404).json({
-        message: "Review not found.",
-      });
+      throw new APIError(404, "Review not found.");
     }
 
     if (userId !== review.user.toString()) {
-      return res.status(403).json({
-        message: "You're not permitted to use this resource.",
-      });
+      throw new APIError(403, "You're not permitted to use this resource.");
     }
 
     const product = await productModel.findById(review.product);
 
     if (!product) {
-      return res.status(400).json({
-        message: "Review can't be deleted because product is already deleted.",
-      });
+      throw new APIError(400, "Review can't be deleted because product is already deleted.");
     }
 
     const totalRating = product.averageRating * product.reviewCount;
@@ -187,7 +180,12 @@ const deleteReview = async (req, res) => {
       message: "Review Deleted Successfully.",
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error unable to delete review.",
     });
   }
@@ -201,40 +199,30 @@ const updateReview = async (req, res) => {
     const { message, rating } = req.body;
 
     if (rating === undefined && message === undefined) {
-      return res.status(400).json({
-        message: "Nothing to update.",
-      });
+      throw new APIError(400, "Nothing to update.");
     }
 
     const review = await reviewModel.findById(reviewId);
 
     if (!review) {
-      return res.status(404).json({
-        message: "Review not found.",
-      });
+      throw new APIError(404, "Review not found.");
     }
 
     if (review.user.toString() !== userId) {
-      return res.status(403).json({
-        message: "You're not permitted to use this resource.",
-      });
+      throw new APIError(403, "You're not permitted to use this resource.");
     }
 
     const product = await productModel.findById(review.product);
 
     if (!product) {
-      return res.status(400).json({
-        message: "Review can't be updated because product is already deleted.",
-      });
+      throw new APIError(400, "Review can't be updated because product is already deleted.");
     }
 
     if (rating !== undefined) {
       const numRating = Number(rating);
 
       if (isNaN(numRating) || numRating < 1 || numRating > 5) {
-        return res.status(400).json({
-          message: "Rating must be a number between 1 and 5.",
-        });
+        throw new APIError(400, "Rating must be a number between 1 and 5.");
       }
 
       const newTotalRating =
@@ -258,8 +246,12 @@ const updateReview = async (req, res) => {
       message: "Review updated successfully.",
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error unable to update review.",
     });
   }
@@ -282,7 +274,7 @@ const getMyReviews = async (req, res) => {
       review: review,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Due an unexpected error, reviews can't be fetched.",
     });
   }

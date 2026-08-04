@@ -1,4 +1,5 @@
 const brandModel = require("../models/brand.model");
+const APIError = require("../utils/APIError.util");
 
 const getBrands = async (req, res) => {
   try {
@@ -15,35 +16,35 @@ const getBrands = async (req, res) => {
       brands: brands,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    return res.status(500).json({
       message: "Due an unexpected error brands can't be fetched.",
     });
   }
 };
 
 const getBrand = async (req, res) => {
-    try {
-        const brandId = req.params.id;
-        const brand = await brandModel.findById(brandId);
+  try {
+    const brandId = req.params.id;
+    const brand = await brandModel.findById(brandId);
 
-        if(!brand) {
-            return res.status(404).json({
-                message : "Brand not found!"
-            });
-        }
-
-        res.status(200).json({
-            message : "Brand fetched successfully.",
-            brand : brand
-        });
-        
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({
-            message : "Due to an unexpected error brand can't be fetched."
-        });
+    if (!brand) {
+      throw new APIError(404, "Brand not found!");
     }
+
+    res.status(200).json({
+      message: "Brand fetched successfully.",
+      brand: brand,
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    res.status(500).json({
+      message: "Due to an unexpected error brand can't be fetched.",
+    });
+  }
 };
 
 module.exports = {

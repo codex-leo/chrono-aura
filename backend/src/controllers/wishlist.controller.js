@@ -1,5 +1,6 @@
 const wishlistModel = require("../models/wishlist.model");
 const productModel = require("../models/product.model");
+const APIError = require("../utils/APIError.util");
 
 // logic for adding into wishlist
 const addToWishlist = async (req, res) => {
@@ -10,24 +11,18 @@ const addToWishlist = async (req, res) => {
     const product = await productModel.findById(productId);
 
     if (!product) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
+      throw new APIError(404, "Product not found.");
     }
 
     const wishlist = await wishlistModel.findOne({ user: userId });
 
     if (!wishlist) {
-      return res.status(404).json({
-        message: "Wishlist not found.",
-      });
+      throw new APIError(404, "Wishlist not found.");
     }
 
     for (const productItem of wishlist.products) {
       if (productItem.product.toString() === productId) {
-        return res.status(400).json({
-          message: "Product already exists in wishlist.",
-        });
+        throw new APIError(400, "Product already exists in wishlist.");
       }
     }
 
@@ -45,7 +40,12 @@ const addToWishlist = async (req, res) => {
       wishlist: wishlist,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error, unable to add to wishlist.",
     });
   }
@@ -60,9 +60,7 @@ const removeFromWishList = async (req, res) => {
     const product = await productModel.findById(productId);
 
     if (!product) {
-      return res.status(404).json({
-        message: "Product not found.",
-      });
+      throw new APIError(404, "Product not found.");
     }
 
     const wishlist = await wishlistModel.findOne({
@@ -71,9 +69,7 @@ const removeFromWishList = async (req, res) => {
     });
 
     if (!wishlist) {
-      return res.status(404).json({
-        message: "Wishlist not found.",
-      });
+      throw new APIError(404, "Wishlist not found.");
     }
 
     for (let i = 0; i < wishlist.products.length; i++) {
@@ -86,11 +82,14 @@ const removeFromWishList = async (req, res) => {
       }
     }
 
-    res.status(404).json({
-      message: "Product not found in wishlist.",
-    });
+    throw new APIError(404, "Product not found in wishlist.");
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message:
         "Due to an unexpected error unable to remove a product from wishlist.",
     });
@@ -112,9 +111,7 @@ const getWishList = async (req, res) => {
     });
 
     if (!wishlist) {
-      return res.status(404).json({
-        message: "Wishlist not found.",
-      });
+      throw new APIError(404, "Wishlist not found.");
     }
 
     res.status(200).json({
@@ -122,7 +119,12 @@ const getWishList = async (req, res) => {
       wishlist: wishlist,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error unable to fetch wishlist.",
     });
   }
@@ -136,15 +138,11 @@ const clearWishList = async (req, res) => {
     const wishlist = await wishlistModel.findOne({ user: userId });
 
     if (!wishlist) {
-      return res.status(404).json({
-        message: "Wishlist not found.",
-      });
+      throw new APIError(404, "Wishlist not found.");
     }
 
     if (wishlist.products.length === 0) {
-      return res.status(400).json({
-        message: "Wishlist is already empty.",
-      });
+      throw new APIError(400, "Wishlist is already empty.");
     }
 
     wishlist.products = [];
@@ -154,7 +152,12 @@ const clearWishList = async (req, res) => {
       message: "Wishlist cleared successfully.",
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error, unable to clear wishlist.",
     });
   }

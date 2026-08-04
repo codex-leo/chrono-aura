@@ -1,5 +1,6 @@
 const cartModel = require("../models/cart.model");
 const productModel = require("../models/product.model");
+const APIError = require("../utils/APIError.util");
 
 //logic for adding into cart
 const addToCart = async (req, res) => {
@@ -7,33 +8,25 @@ const addToCart = async (req, res) => {
     const userId = req.user.id;
 
     if (!req.body.product) {
-      return res.status(400).json({
-        message: "Product data is required.",
-      });
+      throw new APIError(400, "Product data is required.");
     }
 
     const newProductObj = req.body.product;
 
     if (!newProductObj.productId) {
-      return res.status(400).json({
-        message: "Product Id not found in request.",
-      });
+      throw new APIError(400, "Product Id not found in request.");
     }
 
     const product = await productModel.findById(newProductObj.productId);
 
     if (!product) {
-      return res.status(404).json({
-        message: "Product not found.",
-      });
+      throw new APIError(404, "Product not found.");
     }
 
     const cart = await cartModel.findOne({ user: userId });
 
     if (!cart) {
-      return res.status(404).json({
-        message: "Cart not found.",
-      });
+      throw new APIError(404, "Cart not found.");
     }
 
     let quantity;
@@ -43,14 +36,12 @@ const addToCart = async (req, res) => {
     } else {
       const numQuantity = Number(newProductObj.quantity);
       if (isNaN(numQuantity)) {
-        return res.status(400).json({
-          message: "Quantity must be a valid number.",
-        });
-      } else if (numQuantity <= 0) {
-        return res.status(400).json({
-          message: "Quantity must be greater than zero.",
-        });
-      } else {
+        throw new APIError(400, "Quantity must be a valid number.");
+      } 
+      else if (numQuantity <= 0) {
+        throw new APIError(400, "Quantity must be greater than zero.");
+      } 
+      else {
         quantity = numQuantity;
       }
     }
@@ -58,9 +49,7 @@ const addToCart = async (req, res) => {
     for (const productItem of cart.products) {
       if (newProductObj.productId === productItem.product.toString()) {
         if (quantity + productItem.quantity > product.stock) {
-          return res.status(400).json({
-            message: "Quantity exceeded product stock.",
-          });
+          throw new APIError(400, "Quantity exceeded product stock.");
         }
         productItem.quantity += quantity;
         await cart.save();
@@ -71,9 +60,7 @@ const addToCart = async (req, res) => {
     }
 
     if (quantity > product.stock) {
-      return res.status(400).json({
-        message: "Quantity exceeded product stock.",
-      });
+      throw new APIError(400, "Quantity exceeded product stock.");
     }
 
     cart.products.push({
@@ -86,7 +73,12 @@ const addToCart = async (req, res) => {
       message: "Added to cart successfully.",
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due an unexpected error unable to add to cart.",
     });
   }
@@ -102,9 +94,7 @@ const updateCart = async (req, res) => {
     const product = await productModel.findById(productId);
 
     if (!product) {
-      return res.status(404).json({
-        message: "Product not found.",
-      });
+      throw new APIError(404, "Product not found.");
     }
 
     const cart = await cartModel.findOne({
@@ -113,29 +103,22 @@ const updateCart = async (req, res) => {
     });
 
     if (!cart) {
-      return res.status(404).json({
-        message: "Cart not found.",
-      });
+      throw new APIError(404, "Cart not found.");
     }
 
     let numQuantity = Number(quantity);
 
     if (isNaN(numQuantity)) {
-      return res.status(400).json({
-        message: "Quantity must be a valid number.",
-      });
-    } else if (!Number.isInteger(numQuantity)) {
-      return res.status(400).json({
-        message: "Quantity must be an integer.",
-      });
-    } else if (numQuantity <= 0) {
-      return res.status(400).json({
-        message: "Quantity can't be changed to zero or negative.",
-      });
-    } else if (numQuantity > product.stock) {
-      return res.status(400).json({
-        message: "Requested quantity exceeds available stock.",
-      });
+      throw new APIError(400, "Quantity must be a valid number.");
+    } 
+    else if (!Number.isInteger(numQuantity)) {
+      throw new APIError(400, "Quantity must be an integer.");
+    } 
+    else if (numQuantity <= 0) {
+      throw new APIError(400, "Quantity can't be changed to zero or negative.");
+    } 
+    else if (numQuantity > product.stock) {
+      throw new APIError(400, "Requested quantity exceeds available stock.");
     }
 
     for (const productItem of cart.products) {
@@ -149,11 +132,14 @@ const updateCart = async (req, res) => {
       }
     }
 
-    res.status(400).json({
-      message: "Product not found in cart.",
-    });
+    throw new APIError(400, "Product not found in cart.");
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due an unexpected error cart can't be updated.",
     });
   }
@@ -169,10 +155,9 @@ const getCart = async (req, res) => {
         user: userId,
       })
       .populate("products.product", "name brand price");
+
     if (!cart) {
-      return res.status(404).json({
-        message: "Cart not found.",
-      });
+      throw new APIError(404, "Cart not found.");
     }
 
     res.status(200).json({
@@ -180,7 +165,12 @@ const getCart = async (req, res) => {
       cart: cart,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due an unexpected error cart can't be fetched.",
     });
   }
@@ -194,9 +184,7 @@ const clearCart = async (req, res) => {
     const cart = await cartModel.findOne({ user: userId });
 
     if (!cart) {
-      return res.status(404).json({
-        message: "Cart not found.",
-      });
+      throw new APIError(404, "Cart not found.");
     }
 
     cart.products = [];
@@ -206,7 +194,12 @@ const clearCart = async (req, res) => {
       message: "Cart cleared successfully.",
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due an unexpected error cart can't be cleared.",
     });
   }
@@ -218,24 +211,23 @@ const removeProduct = async (req, res) => {
     const userId = req.user.id;
     const productId = req.params.productId;
 
-    const cart = await cartModel.findOne({ user: userId, "products.product" : productId });
+    const cart = await cartModel.findOne({
+      user: userId,
+      "products.product": productId,
+    });
 
     if (!cart) {
-      return res.status(404).json({
-        message: "Cart not found.",
-      });
+      throw new APIError(404, "Cart not found.");
     }
 
     if (cart.products.length === 0) {
-      return res.status(400).json({
-        message: "Cart is already empty.",
-      });
+      throw new APIError(400, "Cart is already empty.");
     }
 
     for (let i = 0; i < cart.products.length; i++) {
       const productObj = cart.products[i];
       if (productObj.product.toString() === productId) {
-        cart.products.splice(i,1);
+        cart.products.splice(i, 1);
         await cart.save();
         return res.status(200).json({
           message: "Removed from cart successfully.",
@@ -243,11 +235,14 @@ const removeProduct = async (req, res) => {
       }
     }
 
-    res.status(404).json({
-      message: "Product not found in cart.",
-    });
+    throw new APIError(404, "Product not found in cart.");
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due an unexpected error unable to remove product from cart.",
     });
   }

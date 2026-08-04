@@ -1,6 +1,7 @@
 const productModel = require("../models/product.model");
 const userModel = require("../models/user.model");
 const brandModel = require("../models/brand.model");
+const APIError = require("../utils/APIError.util");
 
 // logic for getting low stock products
 const lowStock = async (req, res) => {
@@ -8,16 +9,15 @@ const lowStock = async (req, res) => {
 
   try {
     const products = await productModel
-    .find({
-      stock: { $lt: minStockLimit },
-    }, "name description brand productionYear stock")
-    .populate("brand" ,"name")
-    ;
-
+      .find(
+        {
+          stock: { $lt: minStockLimit },
+        },
+        "name description brand productionYear stock",
+      )
+      .populate("brand", "name");
     if (products.length === 0) {
-      return res.status(200).json({
-        message: "There are no low stock products.",
-      });
+      throw new APIError(404, "There are no low stock products.");
     }
 
     res.status(200).json({
@@ -25,8 +25,12 @@ const lowStock = async (req, res) => {
       LowStockProducts: products,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error, unable to process your request.",
     });
   }
@@ -40,16 +44,15 @@ const getStats = async (req, res) => {
     const brandsListed = await brandModel.countDocuments({});
 
     res.status(200).json({
-        message : "Stats fetched successfully.",
-        stats : {
-            totalUsers : users,
-            brandsListed : brandsListed,
-            productsListed : productsListed
-        }
+      message: "Stats fetched successfully.",
+      stats: {
+        totalUsers: users,
+        brandsListed: brandsListed,
+        productsListed: productsListed,
+      },
     });
-
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Due to an unexpected error, unable to process your request.",
     });
   }

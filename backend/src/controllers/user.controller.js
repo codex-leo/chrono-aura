@@ -1,5 +1,6 @@
 const userModel = require("../models/user.model");
 const jwt = require("jsonwebtoken");
+const APIError = require("../utils/APIError.util");
 
 //logic for fetching current logged in user
 const getMe = async (req, res) => {
@@ -16,9 +17,7 @@ const getMe = async (req, res) => {
     );
 
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      throw new APIError(404, "User not found.");
     }
 
     res.status(200).json({
@@ -26,7 +25,12 @@ const getMe = async (req, res) => {
       user: user,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error can not to get user detail.",
     });
   }
@@ -50,7 +54,7 @@ const getAllUsers = async (req, res) => {
       users: users,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Due to an unexpected error can not fetch all users",
     });
   }
@@ -63,9 +67,7 @@ const getUser = async (req, res) => {
     const user = await userModel.findById(id, "-password");
 
     if (!user) {
-      return res.status(404).json({
-        message: "User not found.",
-      });
+      throw new APIError(404, "User not found.");
     }
 
     res.status(200).json({
@@ -73,7 +75,12 @@ const getUser = async (req, res) => {
       user: user,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error can not fetch user details",
     });
   }

@@ -2,6 +2,7 @@ const brandModel = require("../models/brand.model");
 const productModel = require("../models/product.model");
 const mongoose = require("mongoose");
 const storageService = require("../services/storage.service");
+const APIError = require("../utils/APIError.util");
 
 //logic to register a brand(only accessed by admin)
 const registerBrand = async (req, res) => {
@@ -26,7 +27,7 @@ const registerBrand = async (req, res) => {
       brand: brand,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Registration failed due to an unexpected error.",
     });
   }
@@ -53,9 +54,7 @@ const registerProduct = async (req, res) => {
 
     //admin needs to register brand before product
     if (!isBrandRegistered) {
-      return res.status(409).json({
-        message: "Brand is not registered",
-      });
+      throw new APIError(409, "Brand is not registered.");
     }
 
     const { thumbnailImage, images } = req.files;
@@ -107,7 +106,12 @@ const registerProduct = async (req, res) => {
       message: "Product Registered Successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Registration failed due to an unexpected error.",
     });
   }
@@ -137,7 +141,7 @@ const getProducts = async (req, res) => {
       products: products,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: "Unable to fetch products due to an unexpected error.",
     });
   }
@@ -155,7 +159,7 @@ const getProduct = async (req, res) => {
       product: product,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message:
         "Unable to fetch product information due to an unexpexted error.",
     });
@@ -172,9 +176,7 @@ const updateProduct = async (req, res) => {
     });
 
     if (!product) {
-      return res.status(404).json({
-        message: "Product not found.",
-      });
+      throw new APIError(404, "Product not found.");
     }
 
     res.status(200).json({
@@ -182,12 +184,18 @@ const updateProduct = async (req, res) => {
       updatedProduct: product,
     });
   } catch (error) {
-    res.status(500).json({
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+    return res.status(500).json({
       message: "Due to an unexpected error product can't be updated.",
     });
   }
 };
 
+//logic for getting sample products
 const getSampleProducts = async (req, res) => {
   try {
     const sampleProducts = await productModel
@@ -200,9 +208,11 @@ const getSampleProducts = async (req, res) => {
       sampleProduct : sampleProducts
     });
   } catch (error) {
-    console.log(error)
+    return res.status(500).json({
+      message: "Due to an unexpected error sample products can't be fetched.",
+    });
   }
-}
+};
 
 module.exports = {
   registerBrand,
