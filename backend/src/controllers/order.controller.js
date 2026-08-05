@@ -603,40 +603,54 @@ const returnPickup = async (req, res) => {
 
 //logic for processing return received (admin)
 const returnReceived = async (req, res) => {
+  let session;
   try {
+    session = await mongoose.startSession();
     const orderId = req.params.id;
-    const order = await orderModel.findById(orderId);
+    let updatedOrder;
 
-    if (!order) {
-      throw new APIError(404, "Order not found.");
-    }
+    await session.withTransaction(async () => {
+      const order = await orderModel.findById(orderId).session(session);
 
-    if (
-      order.return.status === "out_for_pickup" &&
-      order.orderStatus === "return_processing"
-    ) {
-      const now = new Date();
-      order.return.status = "order_received";
-      order.return.receivedAt = now;
-      order.statusHistory.push({
-        status: "order_received",
-        changedAt: now,
-      });
-      for (const item of order.items) {
-        await productModel.findByIdAndUpdate(item.product, {
-          $inc: {
-            stock: item.quantity,
-          },
-        });
+      if (!order) {
+        throw new APIError(404, "Order not found.");
       }
-      await order.save();
-    } else {
-      throw new APIError(400, "Return order can't be set to received.");
-    }
+
+      if (
+        order.return.status === "out_for_pickup" &&
+        order.orderStatus === "return_processing"
+      ) {
+        const now = new Date();
+        order.return.status = "order_received";
+        order.return.receivedAt = now;
+        order.statusHistory.push({
+          status: "order_received",
+          changedAt: now,
+        });
+        for (const item of order.items) {
+          await productModel.findByIdAndUpdate(
+            item.product,
+            {
+              $inc: {
+                stock: item.quantity,
+              },
+            },
+            { session },
+          );
+          if (!product) {
+            throw new APIError(404, "Product not found.");
+          }
+        }
+        await order.save({ session });
+        updatedOrder = order;
+      } else {
+        throw new APIError(400, "Return order can't be set to received.");
+      }
+    });
 
     res.status(200).json({
       message: "Order return received successfully.",
-      order: order,
+      order: updatedOrder,
     });
   } catch (error) {
     if (error.statusCode) {
@@ -646,8 +660,12 @@ const returnReceived = async (req, res) => {
     }
     return res.status(500).json({
       message:
-        "Due to an unexpected error return order pickup recieved request can't be fulfilled.",
+        "Due to an unexpected error return order pickup received request can't be fulfilled.",
     });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
