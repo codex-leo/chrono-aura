@@ -3,13 +3,16 @@ const productModel = require("../models/product.model");
 const reviewModel = require("../models/review.model");
 const storageService = require("../services/storage.service");
 const APIError = require("../utils/APIError.util");
+const mongoose = require("mongoose");
 
 // logic for uploading a review of a product
 const createReview = async (req, res) => {
+  let session;
   try {
     const productId = req.params.productId;
     const userId = req.user.id;
     const { message, rating = 1 } = req.body;
+    session = await mongoose.startSession();
 
     const product = await productModel.findById(productId);
 
@@ -24,16 +27,10 @@ const createReview = async (req, res) => {
     });
 
     if (!order) {
-      throw new APIError(400, "You only can submit review for a product you've purchased and received.");
-    }
-
-    const existingReview = await reviewModel.findOne({
-      user: userId,
-      product: productId,
-    });
-
-    if (existingReview) {
-      throw new APIError(400, "You have already reviewed this product.");
+      throw new APIError(
+        400,
+        "You only can submit review for a product you've purchased and received.",
+      );
     }
 
     const images = req.files?.images;
@@ -56,26 +53,49 @@ const createReview = async (req, res) => {
       throw new APIError(400, "Rating must be a number between 1 and 5.");
     }
 
-    const review = await reviewModel.create({
-      user: userId,
-      product: productId,
-      images: imagesURI,
-      message: message,
-      rating: numRating,
+    let createdReview;
+
+    await session.withTransaction(async () => {
+      const product = productModel.findById(productId).session(session);
+
+      const existingReview = await reviewModel
+        .findOne({
+          user: userId,
+          product: productId,
+        })
+        .session(session);
+
+      if (existingReview) {
+        throw new APIError(400, "You have already reviewed this product.");
+      }
+
+      const [review] = await reviewModel.create(
+        [
+          {
+            user: userId,
+            product: productId,
+            images: imagesURI,
+            message: message,
+            rating: numRating,
+          },
+        ],
+        { session },
+      );
+
+      const avgRating = product.averageRating;
+      const reviewCount = product.reviewCount;
+      const newAverageRating =
+        (avgRating * reviewCount + numRating) / (reviewCount + 1);
+      product.reviewCount = reviewCount + 1;
+      product.averageRating = Number(newAverageRating.toFixed(1));
+
+      await product.save({ session });
+      createdReview = review;
     });
-
-    const avgRating = product.averageRating;
-    const reviewCount = product.reviewCount;
-    const newAverageRating =
-      (avgRating * reviewCount + numRating) / (reviewCount + 1);
-    product.reviewCount = reviewCount + 1;
-    product.averageRating = Number(newAverageRating.toFixed(1));
-
-    await product.save();
 
     res.status(201).json({
       message: "Review submitted successfully.",
-      review: review,
+      review: createdReview,
     });
   } catch (error) {
     if (error.statusCode) {
@@ -91,6 +111,10 @@ const createReview = async (req, res) => {
     return res.status(500).json({
       message: "Due to an unexpected error review can't be submitted.",
     });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
@@ -141,40 +165,49 @@ const getReviews = async (req, res) => {
 
 //logic for deleting a review
 const deleteReview = async (req, res) => {
+  let session;
   try {
     const userId = req.user.id;
     const reviewId = req.params.id;
+    session = await mongoose.startSession();
 
-    const review = await reviewModel.findById(reviewId);
+    await session.withTransaction(async () => {
+      const review = await reviewModel.findById(reviewId).session(session);
 
-    if (!review) {
-      throw new APIError(404, "Review not found.");
-    }
+      if (!review) {
+        throw new APIError(404, "Review not found.");
+      }
 
-    if (userId !== review.user.toString()) {
-      throw new APIError(403, "You're not permitted to use this resource.");
-    }
+      if (userId !== review.user.toString()) {
+        throw new APIError(403, "You're not permitted to use this resource.");
+      }
 
-    const product = await productModel.findById(review.product);
+      const product = await productModel
+        .findById(review.product)
+        .session(session);
 
-    if (!product) {
-      throw new APIError(400, "Review can't be deleted because product is already deleted.");
-    }
+      if (!product) {
+        throw new APIError(
+          400,
+          "Review can't be deleted because product is already deleted.",
+        );
+      }
 
-    const totalRating = product.averageRating * product.reviewCount;
-    const newRating = totalRating - review.rating;
+      const totalRating = product.averageRating * product.reviewCount;
+      const newRating = totalRating - review.rating;
 
-    product.reviewCount -= 1;
-    if (product.reviewCount === 0) {
-      product.averageRating = 0;
-    } else {
-      product.averageRating = Number(
-        (newRating / product.reviewCount).toFixed(1),
-      );
-    }
+      product.reviewCount -= 1;
+      if (product.reviewCount === 0) {
+        product.averageRating = 0;
+      } else {
+        product.averageRating = Number(
+          (newRating / product.reviewCount).toFixed(1),
+        );
+      }
 
-    await review.deleteOne();
-    await product.save();
+      await review.deleteOne({ session });
+      await product.save({ session });
+    });
 
     res.status(200).json({
       message: "Review Deleted Successfully.",
@@ -188,59 +221,74 @@ const deleteReview = async (req, res) => {
     return res.status(500).json({
       message: "Due to an unexpected error unable to delete review.",
     });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
 //logic for updating a review
 const updateReview = async (req, res) => {
+  let session;
   try {
     const userId = req.user.id;
     const reviewId = req.params.id;
     const { message, rating } = req.body;
+    session = await mongoose.startSession();
 
     if (rating === undefined && message === undefined) {
       throw new APIError(400, "Nothing to update.");
     }
 
-    const review = await reviewModel.findById(reviewId);
+    await session.withTransaction(async () => {
+      const review = await reviewModel.findById(reviewId).session(session);
 
-    if (!review) {
-      throw new APIError(404, "Review not found.");
-    }
-
-    if (review.user.toString() !== userId) {
-      throw new APIError(403, "You're not permitted to use this resource.");
-    }
-
-    const product = await productModel.findById(review.product);
-
-    if (!product) {
-      throw new APIError(400, "Review can't be updated because product is already deleted.");
-    }
-
-    if (rating !== undefined) {
-      const numRating = Number(rating);
-
-      if (isNaN(numRating) || numRating < 1 || numRating > 5) {
-        throw new APIError(400, "Rating must be a number between 1 and 5.");
+      if (!review) {
+        throw new APIError(404, "Review not found.");
       }
 
-      const newTotalRating =
-        product.averageRating * product.reviewCount - review.rating + numRating;
+      if (review.user.toString() !== userId) {
+        throw new APIError(403, "You're not permitted to use this resource.");
+      }
 
-      const newAverageRating = newTotalRating / product.reviewCount;
+      const product = await productModel
+        .findById(review.product)
+        .session(session);
 
-      review.rating = numRating;
+      if (!product) {
+        throw new APIError(
+          400,
+          "Review can't be updated because product is already deleted.",
+        );
+      }
 
-      product.averageRating = Number(newAverageRating.toFixed(1));
-    }
+      if (rating !== undefined) {
+        const numRating = Number(rating);
 
-    if (message !== undefined) {
-      review.message = message;
-    }
+        if (isNaN(numRating) || numRating < 1 || numRating > 5) {
+          throw new APIError(400, "Rating must be a number between 1 and 5.");
+        }
 
-    await product.save();
-    await review.save();
+        const newTotalRating =
+          product.averageRating * product.reviewCount -
+          review.rating +
+          numRating;
+
+        const newAverageRating = newTotalRating / product.reviewCount;
+
+        review.rating = numRating;
+
+        product.averageRating = Number(newAverageRating.toFixed(1));
+      }
+
+      if (message !== undefined) {
+        review.message = message;
+      }
+
+      await product.save({ session });
+      await review.save({ session });
+    });
 
     res.status(200).json({
       message: "Review updated successfully.",
@@ -254,6 +302,10 @@ const updateReview = async (req, res) => {
     return res.status(500).json({
       message: "Due to an unexpected error unable to update review.",
     });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
