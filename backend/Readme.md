@@ -119,7 +119,7 @@ npm run dev //for development
         - `POST /api/order/cancel/:orderId` - Cancel an order (user must be logged in and must be the owner of the order)
         - `POST /api/order/request-return/:orderId` - Request a return for an order (user must be logged in and must be the owner of the order)
         - `PUT /api/order/admin/return-requests/:orderId/approve` - Approve a return request (admin only)
-        - `PUT /api/prder/admin/return-requests/:orderId/reject` - Reject a return request (admin only)
+        - `PUT /api/order/admin/return-requests/:orderId/reject` - Reject a return request (admin only)
         - `PUT /api/order/admin/return-requests/:orderId/return-pickup` - Mark a return request to initiate order return (pickup) (admin only)
         - `PUT /api/order/admin/return-requests/:orderId/return-received` - Mark a return order as received (admin only)
         - `PUT /api/order/admin/return-requests/:orderId/complete-return` - Mark a return order as completed (admin only)
